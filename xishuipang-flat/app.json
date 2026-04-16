@@ -1,0 +1,23 @@
+{
+  "expo": {
+    "name": "溪水旁",
+    "slug": "xishuipang",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "xishuipang",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": false,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.xishuipang.app"
+    },
+    "android": {
+      "package": "com.xishuipang.app"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single"
+    },
+    "plugins": ["expo-router"]
+  }
+}
