@@ -127,7 +127,7 @@ function CoverHero({ volId, coverImage, coverSlug, isMobile }: {
   }, [volId, coverImage, coverSlug, charSuffix]);
 
   const [urlIdx, setUrlIdx] = useState(0);
-  React.useEffect(() => { setUrlIdx(0); }, [coverUrls.length]);
+  React.useEffect(() => { setUrlIdx(0); }, [coverImage, coverSlug, volId]);
 
   const allFailed = urlIdx >= coverUrls.length;
   const currentUri = allFailed ? null : coverUrls[urlIdx];
