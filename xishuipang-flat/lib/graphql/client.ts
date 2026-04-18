@@ -6,10 +6,12 @@ import {
 } from '@apollo/client';
 import { Platform } from 'react-native';
 
-const DEV_URL =
-  Platform.OS === 'android'
-    ? 'http://10.0.2.2:4000/graphql'
-    : 'http://localhost:4000/graphql';
+// const DEV_URL =
+//   Platform.OS === 'android'
+//     ? 'http://10.0.2.2:4000/graphql'
+//     : 'http://localhost:4000/graphql';
+
+const DEV_URL = 'http://192.168.1.52:4000/graphql';
 
 const PROD_URL = 'https://your-app.herokuapp.com/graphql';
 
