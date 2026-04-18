@@ -1,26 +1,32 @@
 import { create } from 'zustand';
 import type { ThemeName } from '../theme';
 
-// 内容项的统一接口 — 文章和音频共用
 export interface ContentItem {
-  id: number;
+  id: string;
+  slug?: string;
   title: string;
   author: string;
   mins: number;
   volume: number;
   category?: string;
+  content?: string[];
+  firstImage?: string | null;
 }
 
+export type CharacterMode = 'simplified' | 'traditional';
+
 interface AppState {
-  // 主题
   theme: ThemeName;
   setTheme: (t: ThemeName) => void;
 
-  // 收藏(用 Set 高性能查询)
-  favs: Set<number>;
-  toggleFav: (id: number) => void;
+  character: CharacterMode;
+  setCharacter: (c: CharacterMode) => void;
+  toggleCharacter: () => void;
 
-  // 播放队列
+  favs: Set<string>;
+  favItems: ContentItem[];
+  toggleFav: (idOrItem: string | ContentItem) => void;
+
   queue: ContentItem[];
   currentIdx: number;
   playing: boolean;
@@ -38,13 +44,30 @@ export const useAppStore = create<AppState>((set) => ({
   theme: 'light',
   setTheme: (theme) => set({ theme }),
 
+  character: 'simplified',
+  setCharacter: (character) => set({ character }),
+  toggleCharacter: () =>
+    set((s) => ({
+      character: s.character === 'simplified' ? 'traditional' : 'simplified',
+    })),
+
   favs: new Set(),
-  toggleFav: (id) =>
+  favItems: [],
+  toggleFav: (idOrItem) =>
     set((s) => {
+      const id = typeof idOrItem === 'string' ? idOrItem : idOrItem.id;
       const favs = new Set(s.favs);
-      if (favs.has(id)) favs.delete(id);
-      else favs.add(id);
-      return { favs };
+      let favItems = [...s.favItems];
+      if (favs.has(id)) {
+        favs.delete(id);
+        favItems = favItems.filter((f) => f.id !== id);
+      } else {
+        favs.add(id);
+        if (typeof idOrItem !== 'string') {
+          favItems.push(idOrItem);
+        }
+      }
+      return { favs, favItems };
     }),
 
   queue: [],

@@ -1,7 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, Pressable, useWindowDimensions } from 'react-native';
+import { Image } from 'expo-image';
 import { useTheme, radius, spacing, fontSize } from '../theme';
 import { useAppStore, ContentItem } from '../store';
+
+const IMG_BASE = 'https://raw.githubusercontent.com/CGCToronto/ByTheStreamWebsite/master/public/content';
 
 export function ArticleCard({
   article, onOpen,
@@ -17,6 +20,13 @@ export function ArticleCard({
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
   const cardWidth = isMobile ? 155 : 220;
+
+  const [imgError, setImgError] = useState(false);
+  const firstImage = (article as any).firstImage;
+  const hasImage = !!firstImage && !imgError;
+  const imageUri = firstImage
+    ? `${IMG_BASE}/volume_${article.volume}/images/${firstImage}`
+    : null;
 
   return (
     <View style={{
@@ -34,9 +44,20 @@ export function ArticleCard({
           marginBottom: isMobile ? 8 : spacing.md,
           overflow: 'hidden',
         }}>
-          <Text style={{ color: '#fff', fontSize: isMobile ? 28 : 36, fontWeight: '700' }}>
-            {article.title.slice(0, 1)}
-          </Text>
+          {hasImage && imageUri ? (
+            <Image
+              source={{ uri: imageUri }}
+              style={{ width: '100%', height: '100%' }}
+              contentFit="cover"
+              cachePolicy="disk"
+              transition={200}
+              onError={() => setImgError(true)}
+            />
+          ) : (
+            <Text style={{ color: '#fff', fontSize: isMobile ? 28 : 36, fontWeight: '700' }}>
+              {article.title.slice(0, 1)}
+            </Text>
+          )}
         </View>
         <Text
           numberOfLines={2}
@@ -71,11 +92,7 @@ export function ArticleCard({
 function ActionBtn({
   icon, active, primary, onPress, isMobile,
 }: {
-  icon: string;
-  active?: boolean;
-  primary?: boolean;
-  onPress: () => void;
-  isMobile?: boolean;
+  icon: string; active?: boolean; primary?: boolean; onPress: () => void; isMobile?: boolean;
 }) {
   const { theme } = useTheme();
   const bg = primary || active ? theme.brand : theme.bgSurface;
