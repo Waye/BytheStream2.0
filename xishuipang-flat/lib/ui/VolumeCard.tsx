@@ -23,9 +23,8 @@ export function VolumeCard({
   const { theme } = useTheme();
   const { width: screenWidth } = useWindowDimensions();
   const isMobile = screenWidth < 768;
-  const cardWidth = customWidth || (isMobile ? 130 : 180);
+  const cardWidth = customWidth || (isMobile ? 130 : 153); // 桌面 180 → 153 (-15%)
 
-  // 信任后端给的 coverImage 文件名；没有就显示 placeholder
   const coverUri = useMemo(() => {
     if (!vol.coverImage) return null;
     return `${IMG_BASE}/volume_${vol.id}/images/${vol.coverImage}`;
@@ -54,17 +53,17 @@ export function VolumeCard({
             />
             <View style={{
               position: 'absolute', bottom: 0, left: 0, right: 0,
-              paddingHorizontal: isMobile ? 10 : 14, paddingBottom: isMobile ? 10 : 14,
-              paddingTop: isMobile ? 40 : 56, backgroundColor: 'rgba(26,36,56,0.5)',
+              paddingHorizontal: isMobile ? 10 : 12, paddingBottom: isMobile ? 10 : 12,
+              paddingTop: isMobile ? 40 : 48, backgroundColor: 'rgba(26,36,56,0.5)',
             }}>
               <Text style={{
-                color: '#fff', fontSize: isMobile ? 28 : 36, fontWeight: '700', letterSpacing: -2,
+                color: '#fff', fontSize: isMobile ? 28 : 32, fontWeight: '700', letterSpacing: -2,
                 textShadowColor: 'rgba(0,0,0,0.5)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 4,
               }}>{vol.id}</Text>
             </View>
             <View style={{
               position: 'absolute', top: 0, left: 0, right: 0,
-              paddingHorizontal: isMobile ? 10 : 14, paddingTop: isMobile ? 10 : 14, paddingBottom: 20,
+              paddingHorizontal: isMobile ? 10 : 12, paddingTop: isMobile ? 10 : 12, paddingBottom: 20,
               backgroundColor: 'rgba(26,36,56,0.3)',
             }}>
               <Text style={{
@@ -74,10 +73,10 @@ export function VolumeCard({
             </View>
           </>
         ) : (
-          <View style={{ flex: 1, padding: isMobile ? 12 : spacing.lg, justifyContent: 'space-between' }}>
+          <View style={{ flex: 1, padding: isMobile ? 12 : spacing.md + 2, justifyContent: 'space-between' }}>
             <Text style={{ color: '#fff', fontSize: isMobile ? 11 : fontSize.small, fontWeight: '600', opacity: 0.92 }}>溪水旁</Text>
             <View>
-              <Text style={{ color: '#fff', fontSize: isMobile ? 32 : 42, fontWeight: '700', letterSpacing: -2, lineHeight: isMobile ? 34 : 44 }}>{vol.id}</Text>
+              <Text style={{ color: '#fff', fontSize: isMobile ? 32 : 38, fontWeight: '700', letterSpacing: -2, lineHeight: isMobile ? 34 : 40 }}>{vol.id}</Text>
               <Text style={{ color: '#fff', fontSize: isMobile ? 11 : fontSize.small, fontWeight: '600', opacity: 0.92, marginTop: 4 }}>{vol.subtitle}</Text>
             </View>
           </View>

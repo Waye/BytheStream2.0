@@ -19,7 +19,7 @@ export function ArticleCard({
   const playNow = useAppStore(s => s.playNow);
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
-  const cardWidth = isMobile ? 155 : 220;
+  const cardWidth = isMobile ? 155 : 188; // 桌面 220 → 188 (-15%)
 
   const [imgError, setImgError] = useState(false);
   const firstImage = (article as any).firstImage;
@@ -28,9 +28,6 @@ export function ArticleCard({
     ? `${IMG_BASE}/volume_${article.volume}/images/${firstImage}`
     : null;
 
-  // 关键：始终传整个 article 对象给 toggleFav
-  // - 未收藏时能正确加进 favItems（需要完整信息）
-  // - 已收藏时 store 内部用 article.id 匹配移除
   const handleToggleFav = () => toggleFav(article);
 
   return (
@@ -59,7 +56,7 @@ export function ArticleCard({
               onError={() => setImgError(true)}
             />
           ) : (
-            <Text style={{ color: '#fff', fontSize: isMobile ? 28 : 36, fontWeight: '700' }}>
+            <Text style={{ color: '#fff', fontSize: isMobile ? 28 : 32, fontWeight: '700' }}>
               {article.title.slice(0, 1)}
             </Text>
           )}

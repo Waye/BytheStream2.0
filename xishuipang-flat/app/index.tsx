@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
-  ScrollView, View, Text, Pressable, ActivityIndicator, useWindowDimensions,
+  ScrollView, View, Text, Pressable, useWindowDimensions,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useQuery } from '@apollo/client';
@@ -10,8 +10,13 @@ import {
   TopNav, AnnounceCarousel, ArticleCard, VolumeCard,
   FavCard, SectionHead, EmptyHint,
 } from '../lib/ui';
+import { SkeletonRow } from '../lib/ui/Skeleton';
 import { ANNOUNCES } from '../lib/mock';
 import { GET_LATEST_VOLUME, GET_ARTICLES_BY_VOLUME, GET_VOLUMES } from '../lib/graphql';
+import { recommend, CandidateArticle } from '../lib/recommend';
+
+// maxWidth 从 1320 缩到 1120（桌面 -15%）
+const CONTENT_MAX_W = 1120;
 
 export default function Home() {
   const { theme } = useTheme();
@@ -40,10 +45,53 @@ export default function Home() {
   });
   const articles = artData?.articlesByVolume ?? [];
 
-  const { data: volData } = useQuery(GET_VOLUMES, {
+  const { data: volData, loading: volLoading } = useQuery(GET_VOLUMES, {
     variables: { offset: 1, limit: 6 },
   });
   const pastVolumes = volData?.volumes ?? [];
+
+  // ═══════════════════════ 推荐：候选池 ═══════════════════════
+  // 额外拉取最近 3 期（latestVol / -1 / -2）的文章作为候选池
+  // 因为这几个查询和最新文章那个有重复命中概率高（Apollo cache 命中率高）
+  const recoVol1 = latestVol;
+  const recoVol2 = latestVol ? latestVol - 1 : null;
+  const recoVol3 = latestVol ? latestVol - 2 : null;
+
+  const { data: recoData1 } = useQuery(GET_ARTICLES_BY_VOLUME, {
+    variables: { volume: recoVol1, character },
+    skip: !recoVol1,
+  });
+  const { data: recoData2 } = useQuery(GET_ARTICLES_BY_VOLUME, {
+    variables: { volume: recoVol2, character },
+    skip: !recoVol2,
+  });
+  const { data: recoData3 } = useQuery(GET_ARTICLES_BY_VOLUME, {
+    variables: { volume: recoVol3, character },
+    skip: !recoVol3,
+  });
+
+  const recommendations = useMemo(() => {
+    const pool: CandidateArticle[] = [];
+    const seen = new Set<string>();
+    for (const d of [recoData1, recoData2, recoData3]) {
+      const arts = d?.articlesByVolume ?? [];
+      for (const a of arts) {
+        if (seen.has(a.id)) continue;
+        seen.add(a.id);
+        pool.push(a as CandidateArticle);
+      }
+    }
+    if (pool.length === 0) return [];
+    return recommend(pool, favItems, 6);
+  }, [recoData1, recoData2, recoData3, favItems]);
+
+  // 推荐区的加载判定：三个 reco query 至少有一个还没出数据
+  const recoLoading =
+    !!recoVol1 && (
+      (!recoData1 && !!recoVol1) ||
+      (!recoData2 && !!recoVol2) ||
+      (!recoData3 && !!recoVol3)
+    );
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.bgCanvas }}>
@@ -55,7 +103,7 @@ export default function Home() {
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{
-          maxWidth: 1320, width: '100%', alignSelf: 'center',
+          maxWidth: CONTENT_MAX_W, width: '100%', alignSelf: 'center',
           paddingTop: pad,
           paddingBottom: isMobile ? 100 : spacing.xl * 3,
         }}
@@ -64,7 +112,7 @@ export default function Home() {
           <AnnounceCarousel slides={ANNOUNCES} />
         </View>
 
-        {/* 期号选择 + 文章 */}
+        {/* ═══════════════ 期号选择 + 文章 ═══════════════ */}
         <View style={{ paddingHorizontal: pad }}>
           <SectionHead
             title={activeVol ? `第 ${activeVol} 期 · ${activeVol === latestVol ? '最新文章' : '文章'}` : '最新文章'}
@@ -73,7 +121,7 @@ export default function Home() {
           />
         </View>
 
-        {volOptions.length > 0 && (
+        {volOptions.length > 0 ? (
           <ScrollView horizontal showsHorizontalScrollIndicator={false}
             contentContainerStyle={{ paddingHorizontal: pad, gap: isMobile ? 6 : 8, marginBottom: isMobile ? spacing.md : spacing.lg }}>
             {volOptions.map(v => {
@@ -95,12 +143,22 @@ export default function Home() {
               );
             })}
           </ScrollView>
+        ) : (
+          // 期号按钮占位（跟正常高度一样）
+          <View style={{
+            height: isMobile ? 28 : 34,
+            marginBottom: isMobile ? spacing.md : spacing.lg,
+            paddingHorizontal: pad,
+          }} />
         )}
 
-        {artLoading ? (
-          <ActivityIndicator color={theme.brand} style={{ marginVertical: spacing.xxl }} />
+        {/* 文章区：加载中 → 骨架；空 → Empty；有数据 → 正常 */}
+        {artLoading || !activeVol ? (
+          <View style={{ marginBottom: spacing.xl }}>
+            <SkeletonRow kind="article" count={isMobile ? 3 : 5} />
+          </View>
         ) : articles.length === 0 ? (
-          <View style={{ paddingHorizontal: pad }}><EmptyHint>暂无文章</EmptyHint></View>
+          <View style={{ paddingHorizontal: pad, marginBottom: spacing.xl }}><EmptyHint>暂无文章</EmptyHint></View>
         ) : (
           <ScrollView horizontal showsHorizontalScrollIndicator={false}
             contentContainerStyle={{ paddingHorizontal: pad, gap: isMobile ? 12 : 20 }}
@@ -112,7 +170,35 @@ export default function Home() {
           </ScrollView>
         )}
 
-        {/* 我的收藏 — 横向滚动，最新在前 */}
+        {/* ═══════════════ 为你推荐 ═══════════════ */}
+        <View style={{ paddingHorizontal: pad }}>
+          <SectionHead
+            title={favItems.length > 0 ? '为你推荐' : '热门往期'}
+          />
+        </View>
+        {recoLoading ? (
+          <View style={{ marginBottom: spacing.xl }}>
+            <SkeletonRow kind="article" count={isMobile ? 3 : 5} />
+          </View>
+        ) : recommendations.length === 0 ? (
+          <View style={{ paddingHorizontal: pad, marginBottom: spacing.xl }}>
+            <EmptyHint>暂无推荐</EmptyHint>
+          </View>
+        ) : (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: pad, gap: isMobile ? 12 : 20 }}
+            style={{ marginBottom: spacing.xl }}>
+            {recommendations.map((a) => (
+              <ArticleCard
+                key={a.id}
+                article={a as any}
+                onOpen={() => router.push(`/article/${encodeURIComponent(a.id)}`)}
+              />
+            ))}
+          </ScrollView>
+        )}
+
+        {/* ═══════════════ 我的收藏 ═══════════════ */}
         <View style={{ paddingHorizontal: pad }}>
           <SectionHead title="我的收藏"
             linkLabel={favItems.length > 0 ? '管理 →' : undefined}
@@ -130,10 +216,7 @@ export default function Home() {
             {favItems.length > (isMobile ? 2 : 4) && (
               <View pointerEvents="none" style={{
                 position: 'absolute', right: 0, top: 0, bottom: 0,
-                width: 40,
-                backgroundColor: 'transparent',
-                alignItems: 'flex-end', justifyContent: 'center',
-                paddingRight: 4,
+                width: 40, alignItems: 'flex-end', justifyContent: 'center', paddingRight: 4,
               }}>
                 <View style={{
                   backgroundColor: theme.bgElevated,
@@ -147,17 +230,21 @@ export default function Home() {
             )}
           </View>
         ) : (
-          <View style={{ paddingHorizontal: pad }}>
+          <View style={{ paddingHorizontal: pad, marginBottom: spacing.xl }}>
             <EmptyHint>还没有收藏 · 点文章卡上的 ♥ 图标收藏你喜欢的内容</EmptyHint>
           </View>
         )}
 
-        {/* 往期期刊 */}
+        {/* ═══════════════ 往期期刊 ═══════════════ */}
         <View style={{ paddingHorizontal: pad, marginTop: spacing.xl }}>
           <SectionHead title="往期期刊" linkLabel="全部期刊 →"
             onLinkPress={() => router.push('/volumes')} />
         </View>
-        {pastVolumes.length === 0 ? (
+        {volLoading ? (
+          <View style={{ marginBottom: spacing.xl }}>
+            <SkeletonRow kind="volume" count={isMobile ? 3 : 6} />
+          </View>
+        ) : pastVolumes.length === 0 ? (
           <View style={{ paddingHorizontal: pad }}><EmptyHint>暂无往期</EmptyHint></View>
         ) : (
           <ScrollView horizontal showsHorizontalScrollIndicator={false}

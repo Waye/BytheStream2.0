@@ -12,7 +12,7 @@ export function FavCard({ item, onPress }: { item: ContentItem; onPress: () => v
     <Pressable
       onPress={onPress}
       style={{
-        width: isMobile ? 220 : 280,
+        width: isMobile ? 220 : 238, // 桌面 280 → 238 (-15%)
         backgroundColor: theme.bgElevated,
         borderRadius: isMobile ? 14 : radius.btn,
         padding: isMobile ? 10 : spacing.md + 2,
@@ -22,10 +22,10 @@ export function FavCard({ item, onPress }: { item: ContentItem; onPress: () => v
     >
       <View style={{
         width: isMobile ? 44 : 56, height: isMobile ? 44 : 56, borderRadius: isMobile ? 8 : 10,
-        backgroundColor: theme.gradA,
+        backgroundColor: theme.brand,
         alignItems: 'center', justifyContent: 'center',
       }}>
-        <Text style={{ color: '#fff', fontSize: isMobile ? 14 : 18, fontWeight: '700' }}>
+        <Text style={{ color: theme.onBrand, fontSize: isMobile ? 14 : 18, fontWeight: '700' }}>
           {item.title.slice(0, 1)}
         </Text>
       </View>

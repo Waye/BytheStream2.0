@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Pressable, ScrollView, useWindowDimensions } from 'react-native';
+import { View, Text, TextInput, Pressable, useWindowDimensions } from 'react-native';
 import { router } from 'expo-router';
-import { useTheme, radius, spacing, fontSize, fontFamily, themeList } from '../theme';
+import { useTheme, radius, spacing, fontSize, fontFamily } from '../theme';
 import { useAppStore } from '../store';
 import { Button } from './Button';
+import { ThemeMenu } from './ThemeMenu';
 
 export function TopNav({
   onLogoPress, onLoginPress, onSearchSubmit,
@@ -40,7 +41,7 @@ export function TopNav({
     }}>
       <View style={{
         flexDirection: 'row', alignItems: 'center',
-        gap: isMobile ? spacing.sm : spacing.lg,
+        gap: isMobile ? spacing.sm : spacing.md,
       }}>
         <Pressable onPress={onLogoPress}>
           <Text style={{
@@ -52,57 +53,10 @@ export function TopNav({
 
         <View style={{ flex: 1 }} />
 
-        {/* 横向滚动主题选择器 */}
-        <View style={{
-          maxWidth: isMobile ? 200 : 360,
-          flexShrink: 1,
-        }}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{
-              gap: isMobile ? 6 : 8,
-              paddingHorizontal: 4,
-              alignItems: 'center',
-            }}
-          >
-            {themeList.map(t => {
-              const isActive = themeName === t.key;
-              return (
-                <Pressable
-                  key={t.key}
-                  onPress={() => setTheme(t.key)}
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: 5,
-                    paddingHorizontal: isMobile ? 8 : 10,
-                    paddingVertical: isMobile ? 5 : 6,
-                    borderRadius: radius.full,
-                    backgroundColor: isActive ? theme.bgElevated : theme.bgSurface,
-                    borderWidth: 1,
-                    borderColor: isActive ? theme.brand : theme.borderSoft,
-                  }}
-                >
-                  <View style={{
-                    width: isMobile ? 10 : 12,
-                    height: isMobile ? 10 : 12,
-                    borderRadius: 999,
-                    backgroundColor: t.swatch,
-                    borderWidth: isActive ? 2 : 1,
-                    borderColor: isActive ? theme.bgElevated : 'rgba(0,0,0,0.08)',
-                  }} />
-                  <Text style={{
-                    fontSize: isMobile ? 11 : fontSize.caption,
-                    fontWeight: isActive ? '700' : '500',
-                    color: isActive ? theme.textPrimary : theme.textSecondary,
-                  }}>{t.label}</Text>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-        </View>
+        {/* 汉堡菜单 = 主题选择 */}
+        <ThemeMenu currentTheme={themeName} onSelect={setTheme} />
 
+        {/* 用户头像 / 登录 */}
         {user ? (
           <Pressable
             onPress={handleAvatarPress}
