@@ -10,20 +10,23 @@
     "codegen": "graphql-codegen --config codegen.ts"
   },
   "dependencies": {
-    "fastify": "^5.3.3",
-    "mercurius": "^16.1.0",
-    "graphql": "^16.11.0",
-    "mongodb": "^6.16.0",
-    "dataloader": "^2.2.3",
-    "ioredis": "^5.6.1",
     "@fastify/cors": "^11.0.0",
     "@fastify/rate-limit": "^10.2.0",
-    "dotenv": "^16.5.0"
+    "dataloader": "^2.2.3",
+    "dotenv": "^16.5.0",
+    "fastify": "^5.3.3",
+    "google-auth-library": "^9.15.1",
+    "graphql": "^16.11.0",
+    "ioredis": "^5.6.1",
+    "jsonwebtoken": "^9.0.3",
+    "mercurius": "^16.1.0",
+    "mongodb": "^6.16.0"
   },
   "devDependencies": {
-    "typescript": "^5.8.3",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^22.15.3",
     "tsx": "^4.19.4",
-    "@types/node": "^22.15.3"
+    "typescript": "^5.8.3"
   },
   "engines": {
     "node": ">=20"

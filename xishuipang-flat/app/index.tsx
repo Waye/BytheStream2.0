@@ -112,22 +112,45 @@ export default function Home() {
           </ScrollView>
         )}
 
-        {/* 我的收藏 */}
+        {/* 我的收藏 — 横向滚动，最新在前 */}
         <View style={{ paddingHorizontal: pad }}>
           <SectionHead title="我的收藏"
             linkLabel={favItems.length > 0 ? '管理 →' : undefined}
             onLinkPress={() => router.push('/favorites')} />
-          {favItems.length > 0 ? (
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
-              {favItems.slice(0, 6).map((a) => (
+        </View>
+        {favItems.length > 0 ? (
+          <View style={{ position: 'relative', marginBottom: spacing.xl }}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={true}
+              contentContainerStyle={{ paddingHorizontal: pad, gap: isMobile ? 12 : 16 }}>
+              {favItems.map((a) => (
                 <FavCard key={a.id} item={a}
                   onPress={() => router.push(`/article/${encodeURIComponent(a.id)}`)} />
               ))}
-            </View>
-          ) : (
+            </ScrollView>
+            {favItems.length > (isMobile ? 2 : 4) && (
+              <View pointerEvents="none" style={{
+                position: 'absolute', right: 0, top: 0, bottom: 0,
+                width: 40,
+                backgroundColor: 'transparent',
+                alignItems: 'flex-end', justifyContent: 'center',
+                paddingRight: 4,
+              }}>
+                <View style={{
+                  backgroundColor: theme.bgElevated,
+                  borderWidth: 1, borderColor: theme.borderSoft,
+                  borderRadius: 999, width: 28, height: 28,
+                  alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <Text style={{ color: theme.textSecondary, fontSize: 14, fontWeight: '600' }}>›</Text>
+                </View>
+              </View>
+            )}
+          </View>
+        ) : (
+          <View style={{ paddingHorizontal: pad }}>
             <EmptyHint>还没有收藏 · 点文章卡上的 ♥ 图标收藏你喜欢的内容</EmptyHint>
-          )}
-        </View>
+          </View>
+        )}
 
         {/* 往期期刊 */}
         <View style={{ paddingHorizontal: pad, marginTop: spacing.xl }}>
@@ -145,7 +168,7 @@ export default function Home() {
           </ScrollView>
         )}
 
-        {/* ===== Footer ===== */}
+        {/* Footer */}
         <View style={{
           marginTop: isMobile ? 40 : 64,
           paddingTop: isMobile ? 28 : 40,

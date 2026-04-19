@@ -4,7 +4,7 @@ import { Image } from 'expo-image';
 import { useTheme, radius, spacing, fontSize } from '../theme';
 import { useAppStore, ContentItem } from '../store';
 
-const IMG_BASE = 'https://raw.githubusercontent.com/CGCToronto/ByTheStreamWebsite/master/public/content';
+const IMG_BASE = 'https://cdn.jsdelivr.net/gh/CGCToronto/ByTheStreamWebsite@master/public/content';
 
 export function ArticleCard({
   article, onOpen,
@@ -27,6 +27,11 @@ export function ArticleCard({
   const imageUri = firstImage
     ? `${IMG_BASE}/volume_${article.volume}/images/${firstImage}`
     : null;
+
+  // 关键：始终传整个 article 对象给 toggleFav
+  // - 未收藏时能正确加进 favItems（需要完整信息）
+  // - 已收藏时 store 内部用 article.id 匹配移除
+  const handleToggleFav = () => toggleFav(article);
 
   return (
     <View style={{
@@ -81,7 +86,7 @@ export function ArticleCard({
         paddingTop: isMobile ? 8 : spacing.md,
         borderTopWidth: 1, borderTopColor: theme.borderSoft,
       }}>
-        <ActionBtn icon="♥" active={isFav} onPress={() => toggleFav(article.id)} isMobile={isMobile} />
+        <ActionBtn icon="♥" active={isFav} onPress={handleToggleFav} isMobile={isMobile} />
         <ActionBtn icon="＋" onPress={() => enqueue(article)} isMobile={isMobile} />
         <ActionBtn icon="▶" primary onPress={() => playNow(article)} isMobile={isMobile} />
       </View>

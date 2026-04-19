@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, useWindowDimensions } from 'react-native';
 import { Slot, router } from 'expo-router';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -15,6 +15,11 @@ function AppShell() {
   const isMobile = width < 768;
   const insets = useSafeAreaInsets();
   const miniPlayerHeight = isMobile ? 60 + insets.bottom : 86;
+
+  // 启动：恢复登录状态 + 加载本地音频收藏
+  const bootstrapAuth = useAppStore(s => s.bootstrapAuth);
+  useEffect(() => { bootstrapAuth(); }, [bootstrapAuth]);
+
   return (
     <View style={{ flex: 1, backgroundColor: theme.bgCanvas, paddingTop: insets.top }}>
       <StatusBar style={themeName === 'dark' ? 'light' : 'dark'} />

@@ -1,14 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Pressable, useWindowDimensions } from 'react-native';
-import { useTheme, radius, spacing, fontSize, fontFamily, ThemeName } from '../theme';
+import { View, Text, TextInput, Pressable, ScrollView, useWindowDimensions } from 'react-native';
+import { router } from 'expo-router';
+import { useTheme, radius, spacing, fontSize, fontFamily, themeList } from '../theme';
 import { useAppStore } from '../store';
 import { Button } from './Button';
-
-const THEMES: { key: ThemeName; label: string }[] = [
-  { key: 'light', label: '暖白' },
-  { key: 'dark', label: '深色' },
-  { key: 'sepia', label: '护眼' },
-];
 
 export function TopNav({
   onLogoPress, onLoginPress, onSearchSubmit,
@@ -20,9 +15,21 @@ export function TopNav({
   const { theme } = useTheme();
   const themeName = useAppStore(s => s.theme);
   const setTheme = useAppStore(s => s.setTheme);
+  const user = useAppStore(s => s.user);
   const [q, setQ] = useState('');
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
+
+  const handleAvatarPress = () => {
+    if (user) router.push('/profile');
+    else if (onLoginPress) onLoginPress();
+    else router.push('/login');
+  };
+
+  const avatarLetter =
+    user?.name?.trim()?.[0]
+    ?? user?.email?.trim()?.[0]?.toUpperCase()
+    ?? '我';
 
   return (
     <View style={{
@@ -31,7 +38,6 @@ export function TopNav({
       paddingHorizontal: isMobile ? spacing.lg : spacing.xl,
       paddingVertical: isMobile ? spacing.sm : spacing.md + 2,
     }}>
-      {/* 第一行: Logo + 主题切换 + 登录 */}
       <View style={{
         flexDirection: 'row', alignItems: 'center',
         gap: isMobile ? spacing.sm : spacing.lg,
@@ -46,37 +52,81 @@ export function TopNav({
 
         <View style={{ flex: 1 }} />
 
+        {/* 横向滚动主题选择器 */}
         <View style={{
-          flexDirection: 'row', gap: 3, padding: 3,
-          backgroundColor: theme.bgSurface,
-          borderRadius: 12,
-          borderWidth: 1, borderColor: theme.borderSoft,
+          maxWidth: isMobile ? 200 : 360,
+          flexShrink: 1,
         }}>
-          {THEMES.map(t => (
-            <Pressable
-              key={t.key}
-              onPress={() => setTheme(t.key)}
-              style={{
-                paddingHorizontal: isMobile ? 8 : spacing.md,
-                paddingVertical: isMobile ? 4 : 6,
-                borderRadius: 8,
-                backgroundColor: themeName === t.key ? theme.bgElevated : 'transparent',
-              }}
-            >
-              <Text style={{
-                fontSize: isMobile ? 11 : fontSize.caption,
-                fontWeight: themeName === t.key ? '700' : '500',
-                color: themeName === t.key ? theme.textPrimary : theme.textSecondary,
-              }}>{t.label}</Text>
-            </Pressable>
-          ))}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{
+              gap: isMobile ? 6 : 8,
+              paddingHorizontal: 4,
+              alignItems: 'center',
+            }}
+          >
+            {themeList.map(t => {
+              const isActive = themeName === t.key;
+              return (
+                <Pressable
+                  key={t.key}
+                  onPress={() => setTheme(t.key)}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 5,
+                    paddingHorizontal: isMobile ? 8 : 10,
+                    paddingVertical: isMobile ? 5 : 6,
+                    borderRadius: radius.full,
+                    backgroundColor: isActive ? theme.bgElevated : theme.bgSurface,
+                    borderWidth: 1,
+                    borderColor: isActive ? theme.brand : theme.borderSoft,
+                  }}
+                >
+                  <View style={{
+                    width: isMobile ? 10 : 12,
+                    height: isMobile ? 10 : 12,
+                    borderRadius: 999,
+                    backgroundColor: t.swatch,
+                    borderWidth: isActive ? 2 : 1,
+                    borderColor: isActive ? theme.bgElevated : 'rgba(0,0,0,0.08)',
+                  }} />
+                  <Text style={{
+                    fontSize: isMobile ? 11 : fontSize.caption,
+                    fontWeight: isActive ? '700' : '500',
+                    color: isActive ? theme.textPrimary : theme.textSecondary,
+                  }}>{t.label}</Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
         </View>
 
-        <Button label="登录" onPress={onLoginPress}/>
+        {user ? (
+          <Pressable
+            onPress={handleAvatarPress}
+            style={({ pressed }) => ({
+              width: isMobile ? 34 : 38,
+              height: isMobile ? 34 : 38,
+              borderRadius: 999,
+              backgroundColor: theme.brand,
+              alignItems: 'center',
+              justifyContent: 'center',
+              opacity: pressed ? 0.8 : 1,
+            })}>
+            <Text style={{
+              color: theme.onBrand,
+              fontWeight: '700',
+              fontSize: isMobile ? 14 : 15,
+            }}>{avatarLetter}</Text>
+          </Pressable>
+        ) : (
+          <Button label="登录" onPress={handleAvatarPress}/>
+        )}
       </View>
 
-      {/* 第二行: 搜索框 (移动端独占一行) */}
-      <View style={{ marginTop: isMobile ? spacing.sm : spacing.sm, maxWidth: isMobile ? undefined : 560 }}>
+      <View style={{ marginTop: spacing.sm, maxWidth: isMobile ? undefined : 560 }}>
         <TextInput
           value={q}
           onChangeText={setQ}

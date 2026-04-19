@@ -26,11 +26,32 @@ export interface TocArticleEntry {
   category?: string;
 }
 
+// ─────────────────────────── 用户 ───────────────────────────
+export type AuthProvider = 'email' | 'google' | 'facebook';
+
 export interface UserDoc {
   _id: ObjectId;
-  id: number;
+  id: number;                  // 自增，保留兼容
   email?: string;
   name?: string;
+  avatar?: string;
+  provider: AuthProvider;
+  providerId?: string;         // OAuth sub / fb user id
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// ─────────────────────────── 文章收藏 ───────────────────────────
+export interface FavoriteDoc {
+  _id: ObjectId;
+  userId: number;
+  articleId: string;           // "volume:slug"
+  volume: number;
+  slug: string;
+  title: string;
+  author?: string;
+  category?: string;
+  createdAt: Date;
 }
 
 export interface UsageDoc {
@@ -43,6 +64,7 @@ export interface UsageDoc {
   time: Date;
 }
 
+// ─────────────────────────── GraphQL 返回类型 ───────────────────────────
 export interface GqlArticle {
   id: string;
   slug: string;
@@ -62,4 +84,29 @@ export interface GqlVolume {
   coverSlug: string | null;
   coverImage: string | null;
   articles: GqlArticle[];
+}
+
+export interface GqlUser {
+  id: number;
+  email: string | null;
+  name: string | null;
+  avatar: string | null;
+  provider: 'EMAIL' | 'GOOGLE' | 'FACEBOOK';
+  createdAt: string | null;
+}
+
+export interface GqlAuthPayload {
+  token: string;
+  user: GqlUser;
+}
+
+export interface GqlFavorite {
+  id: string;
+  articleId: string;
+  volume: number;
+  slug: string;
+  title: string;
+  author: string | null;
+  category: string | null;
+  createdAt: string;
 }

@@ -9,7 +9,7 @@ import { TopNav, IconButton } from '../../lib/ui';
 import { GET_ARTICLE } from '../../lib/graphql';
 
 const FONT_SIZES = [15, 17, 19, 21];
-const IMG_BASE = 'https://raw.githubusercontent.com/CGCToronto/ByTheStreamWebsite/master/public/content';
+const IMG_BASE = 'https://cdn.jsdelivr.net/gh/CGCToronto/ByTheStreamWebsite@master/public/content';
 
 function articleImageUrl(volume: number, filename: string): string {
   return `${IMG_BASE}/volume_${volume}/images/${filename}`;

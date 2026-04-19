@@ -8,47 +8,49 @@
 |---|---|
 | 前端 | Expo SDK 52 · React Native 0.76.9 · TypeScript |
 | 路由 | Expo Router v4（文件即路由） |
-| 状态 | Zustand · Apollo Client 3.x |
-| 图片 | expo-image（三平台磁盘缓存） |
+| 状态 | Zustand · Apollo Client 3.x（AsyncStorage 持久化） |
+| 图片 | expo-image（三平台磁盘缓存）· jsDelivr CDN |
+| 认证 | JWT · Google / Facebook OAuth（expo-auth-session） |
 | 后端 | Fastify · Mercurius GraphQL · DataLoader |
-| 数据库 | MongoDB Atlas（复用现有 Xishuipang 数据库） |
-| 缓存 | 内存缓存（Redis 接口预留） |
+| 数据库 | MongoDB Atlas（Xishuipang 库 · Articles / TableOfContents / Users / Favorites / Usage） |
+| 缓存 | 内存缓存（Redis 接口预留）· Apollo cache-first |
 
 ## 项目结构
 
 ```
 xishuipang-flat/
 ├── app/                    # 页面（Expo Router 文件路由）
-│   ├── _layout.tsx         # 根布局（ApolloProvider + ThemeProvider + MiniPlayer）
-│   ├── index.tsx           # 首页（期号选择 + 文章滑窗 + 往期 + Footer）
+│   ├── _layout.tsx         # 根布局（ApolloProvider + ThemeProvider + MiniPlayer + bootstrapAuth）
+│   ├── index.tsx           # 首页（期号选择 + 文章滑窗 + 横向收藏 stack + 往期）
 │   ├── article/[id].tsx    # 文章阅读器（简繁切换 + 字号 + 内嵌图片）
 │   ├── volume/[id].tsx     # 期刊详情（封面图 Hero + track list）
 │   ├── volumes.tsx         # 全部期刊（排序筛选 + 封面图网格）
 │   ├── favorites.tsx       # 收藏管理
 │   ├── search.tsx          # 搜索（分页 infinite scroll）
 │   ├── queue.tsx           # 播放队列（↑↓ 排序）
-│   ├── login.tsx           # 登录（邮箱 + OAuth UI）
-│   ├── profile.tsx         # 用户中心（简繁设置 + 收藏）
+│   ├── login.tsx           # 登录（Google/FB OAuth + 邮箱降级）
+│   ├── profile.tsx         # 用户中心（头像 + 登出 + 简繁设置 + 收藏）
 │   ├── legal.tsx           # 法律声明（中英双语）
 │   └── privacy.tsx         # Privacy Policy
 ├── lib/
-│   ├── theme/              # 设计系统（三主题 + tokens）
-│   ├── store/              # Zustand（收藏 + 队列 + 简繁状态）
-│   ├── ui/                 # UI 组件（ArticleCard, VolumeCard, TopNav 等）
-│   ├── mock/               # 公告轮播数据 + 开发 fallback
-│   └── graphql/            # Apollo Client + gql 查询
+│   ├── theme/              # 设计系统（7 主题 + tokens）
+│   ├── store/              # Zustand（user + 文章收藏云同步 + 音频收藏本地）
+│   ├── ui/                 # UI 组件（TopNav 含横向主题滚动、ArticleCard 等）
+│   ├── auth/               # OAuth hooks（Google / Facebook）
+│   ├── mock/               # 公告轮播数据
+│   └── graphql/            # Apollo Client（authLink + 持久化）+ gql 查询
 ├── assets/images/          # 教会照片（公告轮播用）
 ├── server/                 # 后端（独立 Node 项目）
 │   ├── src/
-│   │   ├── index.ts        # Fastify 入口 + CORS + rate limit
-│   │   ├── schema.ts       # GraphQL SDL
+│   │   ├── index.ts        # Fastify 入口 + CORS + rate limit + ensureIndexes
+│   │   ├── schema.ts       # GraphQL SDL（含 Auth/Favorite/AudioEpisode）
 │   │   ├── resolvers.ts    # Query / Mutation 实现
+│   │   ├── auth.ts         # JWT + Google/FB token 验证
 │   │   ├── loaders.ts      # DataLoader（批量查询）
 │   │   ├── db.ts           # MongoDB 连接池
 │   │   ├── cache.ts        # 缓存（Redis / 内存 fallback）
 │   │   └── types.ts        # TypeScript 类型
 │   ├── package.json
-│   ├── Procfile            # Heroku 部署
 │   └── .env.example
 ├── DESIGN.md               # 设计系统文档（Pinterest 风格参考）
 ├── streaming.md            # 架构规划（音频流 + HLS）
@@ -63,9 +65,10 @@ xishuipang-flat/
 cd server
 npm install
 cp .env.example .env
-# 编辑 .env 填入 MongoDB Atlas URI
+# 编辑 .env 填入 MongoDB Atlas URI + JWT_SECRET（OAuth 变量可空）
 npm run dev
 # ✓ MongoDB connected
+# ✓ Indexes ensured
 # 🚀 GraphQL server ready at http://localhost:4000/graphiql
 ```
 
@@ -88,38 +91,40 @@ npx expo start --clear
 ## 核心功能
 
 ### 已完成
-- **首页**：4 页公告轮播（教会照片+外链）+ 期号选择器 + 文章水平滑窗 + 往期期刊
+- **首页**：4 页公告轮播（教会照片+外链）+ 期号选择器 + 文章水平滑窗 + **横向收藏 stack（新在前）** + 往期期刊
 - **文章阅读**：真实正文 + 内嵌图片（自适应宽高比）+ 字号四档 + **简繁切换**
-- **期刊详情**：封面图 Hero + Spotify 专辑式 track list + 播放全部
+- **期刊详情**：封面图 Hero（右半裁切）+ Spotify 专辑式 track list + 播放全部
 - **全部期刊**：封面图网格 + 最新/最早排序 + 一次加载
 - **全文搜索**：MongoDB `$text` 索引 + 分页 infinite scroll
-- **收藏系统**：♥ 收藏 / 管理 / 删除
+- **用户系统**：JWT 登录 · Google/FB OAuth（schema 就绪）· 邮箱降级登录 · 头像 UI · 登出
+- **文章收藏云同步**：登录后本地 ↔ MongoDB Favorites 集合（userId + articleId 唯一索引）
+- **音频收藏本地**：AsyncStorage 持久化（接口就绪，音频功能待真实接入）
 - **播放队列**：＋ 加入 / ▶ 播放 / ↑↓ 排序 / ✕ 删除
-- **三主题**：暖白 / 深色 / 护眼 sepia
+- **7 主题**：暖白 / 深色 / 护眼 / 春 / 夏 / 秋 / 冬 · 横向可滑选择器
 - **Mini Player**：全局固定底部
-- **图片缓存**：expo-image 磁盘缓存（iOS/Android/Web 统一）
+- **图片加速**：jsDelivr CDN（替代 GitHub raw，解决 CORB 阻塞）+ expo-image 磁盘缓存
+- **Apollo 持久化**：`cache-first` + AsyncStorage（秒开所有已访问页面）
 - **版权页面**：法律声明（中英双语）+ Privacy Policy
 
 ### 待做
-- Heroku 部署
-- 音频实际播放（expo-av + HLS 流）
-- 用户认证（JWT / OAuth）
-- 播放队列拖拽排序
-- 社区功能
+- OAuth 后台注册（Google Cloud Console / Facebook Developers）
+- 服务器部署（待决定服务商）
+- 音频实际播放（HLS + 对象存储 + expo-av / react-native-track-player）
+- 播放队列拖拽排序（Reanimated + Gesture Handler）
 
 ## 图片系统
 
-图片从 GitHub 仓库直接加载，URL 格式：
+图片通过 jsDelivr CDN 从 GitHub 仓库加载：
 
 ```
-https://raw.githubusercontent.com/CGCToronto/ByTheStreamWebsite/master/public/content/volume_{N}/images/{filename}
+https://cdn.jsdelivr.net/gh/CGCToronto/ByTheStreamWebsite@master/public/content/volume_{N}/images/{filename}
 ```
 
 | 类型 | 来源 | 缓存 |
 |---|---|---|
 | 文章内嵌图 | content 数组中 `<filename.jpg>` 标记 | expo-image 磁盘缓存 |
 | 文章卡片缩略图 | GraphQL `firstImage` 字段 | expo-image 磁盘缓存 |
-| 期刊封面 | GraphQL `coverImage` + 多 URL fallback | expo-image 磁盘缓存 |
+| 期刊封面 | GraphQL `coverImage` 字段（信任后端，不再猜格式） | expo-image 磁盘缓存 |
 | 公告轮播背景 | 本地 `assets/images/` | bundled |
 
 ## GraphQL API
@@ -145,9 +150,46 @@ https://raw.githubusercontent.com/CGCToronto/ByTheStreamWebsite/master/public/co
     total articles { title author volume }
   }
 }
+
+# 认证
+mutation { loginOrRegister(email: "x@y.com") { token user { id email } } }
+mutation { loginWithGoogle(idToken: "...") { token user { ...UserFields } } }
+mutation { loginWithFacebook(accessToken: "...") { token user { ...UserFields } } }
+{ me { id email name provider } }
+
+# 文章收藏
+mutation { addFavorite(articleId: "85:0_prayer_s", title: "...", author: "...") { id } }
+mutation { removeFavorite(articleId: "85:0_prayer_s") }
+{ myFavorites { id articleId volume title author createdAt } }
+
+# 音频（接口就绪，暂返回空数组）
+{ audioEpisodes(volume: 85) { id title streamUrl durationSeconds } }
 ```
 
+## MongoDB 集合
+
+| 集合 | 用途 | 关键索引 |
+|---|---|---|
+| `Articles` | 文章正文 | `{ title: "text", content: "text" }` |
+| `TableOfContents` | 期刊目录 | `{ volume, character }` |
+| `Users` | 用户（扩展 OAuth 字段） | `{ provider, providerId }` unique · `{ email }` sparse |
+| `Favorites` | 文章收藏（**批次 5 新增**） | `{ userId, articleId }` unique |
+| `Usage` | 阅读行为上报 | — |
+
+`Users` 和 `Favorites` 的索引在后端启动时由 `ensureIndexes()` 自动创建。
+
 ## Update Logs
+
+### 0419 — 批次 5：用户系统 + 云端收藏 + 7 主题 + 性能优化
+- **用户认证**：JWT + Google/Facebook OAuth schema（待后台注册 Client ID）+ 邮箱降级登录
+- **文章收藏云同步**：登录后本地 ↔ MongoDB Favorites 集合；未登录本地内存
+- **音频收藏本地**：AsyncStorage 持久化（key: `xsp_audio_favs_v1`）
+- **7 主题**：原 3 个 + 春/夏/秋/冬；护眼主题重新调色（暖焦糖棕代替冷蓝）
+- **TopNav 横向主题选择器**：可滑动色卡，当前选中描边高亮
+- **首页收藏 stack**：横向滚动 + 新在前（unshift）+ 右侧箭头暗示可滑
+- **图片加速**：jsDelivr CDN 替代 GitHub raw（解决 CORB 阻塞）
+- **封面简化**：信任后端 `coverImage`，不再猜 7 种 URL（每卡请求数 7 → 1）
+- **Apollo 持久化**：`cache-first` + `apollo3-cache-persist` AsyncStorage（整页刷新秒开）
 
 ### 0418 — 图片系统 + UI 优化
 - expo-image 三平台磁盘缓存
@@ -180,10 +222,10 @@ https://raw.githubusercontent.com/CGCToronto/ByTheStreamWebsite/master/public/co
 | `/article/:id` | 文章阅读器 | GraphQL: article（含 content + firstImage） |
 | `/queue` | 播放队列 | Zustand store |
 | `/volumes` | 全部期刊 | GraphQL: volumes（含 coverImage） |
-| `/favorites` | 管理收藏 | Zustand store.favItems |
+| `/favorites` | 管理收藏 | Zustand favItems（云同步） |
 | `/search?q=` | 搜索结果 | GraphQL: search（分页） |
-| `/login` | 登录 | UI only |
-| `/profile` | 用户中心 | Zustand store + 简繁设置 |
+| `/login` | 登录 | GraphQL: loginOrRegister / loginWithGoogle / loginWithFacebook |
+| `/profile` | 用户中心 | Zustand user + favItems |
 | `/legal` | 法律声明 | 静态内容（中英双语） |
 | `/privacy` | Privacy Policy | 静态内容 |
 

@@ -1,10 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text, Pressable, useWindowDimensions } from 'react-native';
 import { Image } from 'expo-image';
-import { useTheme, radius, spacing, fontSize } from '../theme';
-import { useAppStore } from '../store';
+import { useTheme, spacing, fontSize } from '../theme';
 
-const IMG_BASE = 'https://raw.githubusercontent.com/CGCToronto/ByTheStreamWebsite/master/public/content';
+const IMG_BASE = 'https://cdn.jsdelivr.net/gh/CGCToronto/ByTheStreamWebsite@master/public/content';
 
 export interface VolumeMeta {
   id: number;
@@ -22,35 +21,18 @@ export function VolumeCard({
   width?: number;
 }) {
   const { theme } = useTheme();
-  const character = useAppStore(s => s.character);
   const { width: screenWidth } = useWindowDimensions();
   const isMobile = screenWidth < 768;
   const cardWidth = customWidth || (isMobile ? 130 : 180);
-  const charSuffix = character === 'traditional' ? '_t' : '_s';
 
-  const coverUrls = useMemo(() => {
-    const base = `${IMG_BASE}/volume_${vol.id}/images`;
-    const urls: string[] = [];
-    if (vol.coverImage) urls.push(`${base}/${vol.coverImage}`);
-    urls.push(`${base}/cover${charSuffix}.png`);
-    urls.push(`${base}/cover${charSuffix}.jpg`);
-    if (vol.coverSlug) {
-      urls.push(`${base}/${vol.coverSlug}.png`);
-      urls.push(`${base}/${vol.coverSlug}.jpg`);
-      const numPrefix = vol.coverSlug.match(/^(\d+)_/)?.[1];
-      if (numPrefix) {
-        urls.push(`${base}/${numPrefix}_cover${charSuffix}.png`);
-        urls.push(`${base}/${numPrefix}_cover${charSuffix}.jpg`);
-      }
-    }
-    return [...new Set(urls)];
-  }, [vol.id, vol.coverImage, vol.coverSlug, charSuffix]);
+  // 信任后端给的 coverImage 文件名；没有就显示 placeholder
+  const coverUri = useMemo(() => {
+    if (!vol.coverImage) return null;
+    return `${IMG_BASE}/volume_${vol.id}/images/${vol.coverImage}`;
+  }, [vol.id, vol.coverImage]);
 
-  const [urlIdx, setUrlIdx] = useState(0);
-  React.useEffect(() => { setUrlIdx(0); }, [coverUrls.length]);
-
-  const allFailed = urlIdx >= coverUrls.length;
-  const currentUri = allFailed ? null : coverUrls[urlIdx];
+  const [imgError, setImgError] = useState(false);
+  const showImage = coverUri && !imgError;
 
   return (
     <Pressable onPress={onPress} style={{ width: cardWidth }}>
@@ -60,15 +42,15 @@ export function VolumeCard({
         backgroundColor: theme.gradB,
         overflow: 'hidden',
       }}>
-        {currentUri && !allFailed ? (
+        {showImage ? (
           <>
             <Image
-              source={{ uri: currentUri }}
+              source={{ uri: coverUri! }}
               style={{ position: 'absolute', top: 0, right: 0, width: '200%', height: '100%' }}
               contentFit="cover"
               cachePolicy="disk"
               transition={300}
-              onError={() => setUrlIdx(i => i + 1)}
+              onError={() => setImgError(true)}
             />
             <View style={{
               position: 'absolute', bottom: 0, left: 0, right: 0,

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, ScrollView, Pressable, useWindowDimensions } from 'react-native';
 import { router } from 'expo-router';
 import { useTheme, spacing, fontSize } from '../lib/theme';
@@ -11,9 +11,19 @@ export default function Profile() {
   const isMobile = width < 768;
   const pad = isMobile ? spacing.lg : spacing.xl;
 
+  const user = useAppStore(s => s.user);
+  const authReady = useAppStore(s => s.authReady);
   const favItems = useAppStore(s => s.favItems);
   const toggleFav = useAppStore(s => s.toggleFav);
   const character = useAppStore(s => s.character);
+  const logout = useAppStore(s => s.logout);
+
+  // 未登录自动跳 login（等 authReady 后再判断，避免闪跳）
+  useEffect(() => {
+    if (authReady && !user) {
+      router.replace('/login');
+    }
+  }, [authReady, user]);
 
   const cols = isMobile ? 1 : width < 1024 ? 2 : 3;
   const gap = 14;
@@ -21,6 +31,32 @@ export default function Profile() {
   const itemWidth = cols === 1 ? contentWidth : (contentWidth - gap * (cols - 1)) / cols;
 
   const goBack = () => { if (router.canGoBack?.()) router.back(); else router.replace('/'); };
+
+  // authReady 之前或 user 为 null 时先不渲染主内容
+  if (!user) {
+    return (
+      <View style={{ flex: 1, backgroundColor: theme.bgCanvas }}>
+        <TopNav onLogoPress={() => router.push('/')} onLoginPress={() => router.push('/login')}
+          onSearchSubmit={(q) => router.push(`/search?q=${encodeURIComponent(q)}`)} />
+      </View>
+    );
+  }
+
+  // 头像字符 + 显示名
+  const displayName = user.name?.trim() || user.email?.split('@')[0] || '用户';
+  const avatarLetter =
+    user.name?.trim()?.[0]
+    ?? user.email?.trim()?.[0]?.toUpperCase()
+    ?? '我';
+  const providerLabel =
+    user.provider === 'GOOGLE' ? 'Google'
+    : user.provider === 'FACEBOOK' ? 'Facebook'
+    : '邮箱';
+
+  const handleLogout = async () => {
+    await logout();
+    router.replace('/');
+  };
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.bgCanvas }}>
@@ -42,16 +78,30 @@ export default function Profile() {
           flexDirection: isMobile ? 'column' : 'row', alignItems: 'center', gap: spacing.lg + 4,
           paddingVertical: spacing.xl, borderBottomWidth: 1, borderBottomColor: theme.borderSoft, marginBottom: spacing.lg,
         }}>
-          <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: theme.gradA, alignItems: 'center', justifyContent: 'center' }}>
-            <Text style={{ color: '#fff', fontSize: 32, fontWeight: '700' }}>客</Text>
+          <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: theme.brand, alignItems: 'center', justifyContent: 'center' }}>
+            <Text style={{ color: theme.onBrand, fontSize: 32, fontWeight: '700' }}>{avatarLetter}</Text>
           </View>
           <View style={{ flex: isMobile ? undefined : 1, alignItems: isMobile ? 'center' : 'flex-start' }}>
-            <Text style={{ fontSize: 26, fontWeight: '700', letterSpacing: -0.5, color: theme.textPrimary }}>访客</Text>
+            <Text style={{ fontSize: 26, fontWeight: '700', letterSpacing: -0.5, color: theme.textPrimary }}>
+              {displayName}
+            </Text>
+            {user.email && (
+              <Text style={{ fontSize: fontSize.small, color: theme.textMuted, marginTop: 2 }}>
+                {user.email}
+              </Text>
+            )}
             <Text style={{ fontSize: fontSize.body, color: theme.textSecondary, marginTop: 4, textAlign: isMobile ? 'center' : 'left' }}>
-              收藏 {favItems.length} 篇 · {character === 'simplified' ? '简体' : '繁體'}模式
+              收藏 {favItems.length} 篇 · {providerLabel}登录 · {character === 'simplified' ? '简体' : '繁體'}模式
             </Text>
           </View>
-          <Button label="编辑资料" variant="secondary" />
+          <Pressable onPress={handleLogout}
+            style={({ pressed }) => ({
+              paddingHorizontal: spacing.lg, paddingVertical: 10,
+              borderRadius: 12, borderWidth: 1, borderColor: theme.borderSoft,
+              backgroundColor: pressed ? theme.bgSurface : theme.bgElevated,
+            })}>
+            <Text style={{ fontSize: fontSize.small, fontWeight: '600', color: theme.textPrimary }}>登出</Text>
+          </Pressable>
         </View>
 
         {/* 设置 */}
@@ -79,7 +129,7 @@ export default function Profile() {
           </Pressable>
         </View>
         {favItems.length === 0 ? (
-          <EmptyHint>还没有收藏</EmptyHint>
+          <EmptyHint>还没有收藏 · 去文章页点 ♥ 收藏你喜欢的内容</EmptyHint>
         ) : (
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap }}>
             {favItems.slice(0, 6).map(a => (
@@ -105,10 +155,10 @@ function InfoRow({ item, meta, itemWidth, onOpen, onRemove }: {
       borderRadius: 14, padding: spacing.md + 2, flexDirection: 'row', alignItems: 'center', gap: spacing.md + 2,
     }}>
       <View style={{
-        width: 52, height: 52, borderRadius: 10, backgroundColor: theme.gradA,
+        width: 52, height: 52, borderRadius: 10, backgroundColor: theme.brand,
         alignItems: 'center', justifyContent: 'center',
       }}>
-        <Text style={{ color: '#fff', fontWeight: '700', fontSize: 18 }}>{item.title.slice(0, 1)}</Text>
+        <Text style={{ color: theme.onBrand, fontWeight: '700', fontSize: 18 }}>{item.title.slice(0, 1)}</Text>
       </View>
       <Pressable onPress={onOpen} style={{ flex: 1, minWidth: 0 }}>
         <Text numberOfLines={1} style={{ fontSize: fontSize.body, fontWeight: '700', color: theme.textPrimary }}>{item.title}</Text>

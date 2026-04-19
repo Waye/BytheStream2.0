@@ -8,7 +8,7 @@ import { useAppStore, ContentItem } from '../../lib/store';
 import { TopNav, Button, IconButton } from '../../lib/ui';
 import { GET_ARTICLES_BY_VOLUME, GET_VOLUME } from '../../lib/graphql';
 
-const IMG_BASE = 'https://raw.githubusercontent.com/CGCToronto/ByTheStreamWebsite/master/public/content';
+const IMG_BASE = 'https://cdn.jsdelivr.net/gh/CGCToronto/ByTheStreamWebsite@master/public/content';
 
 export default function VolumeDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -104,80 +104,37 @@ function CoverHero({ volId, coverImage, coverSlug, isMobile }: {
   volId: number; coverImage?: string | null; coverSlug?: string | null; isMobile: boolean;
 }) {
   const { theme } = useTheme();
-  const character = useAppStore(s => s.character);
-  const charSuffix = character === 'traditional' ? '_t' : '_s';
-  const heroW = isMobile ? 160 : 220;
+  const coverUri = coverImage
+    ? `${IMG_BASE}/volume_${volId}/images/${coverImage}`
+    : null;
+  const [imgError, setImgError] = useState(false);
+  const showImage = coverUri && !imgError;
 
-  const coverUrls = useMemo(() => {
-    const base = `${IMG_BASE}/volume_${volId}/images`;
-    const urls: string[] = [];
-    if (coverImage) urls.push(`${base}/${coverImage}`);
-    urls.push(`${base}/cover${charSuffix}.png`);
-    urls.push(`${base}/cover${charSuffix}.jpg`);
-    if (coverSlug) {
-      urls.push(`${base}/${coverSlug}.png`);
-      urls.push(`${base}/${coverSlug}.jpg`);
-      const numPrefix = coverSlug.match(/^(\d+)_/)?.[1];
-      if (numPrefix) {
-        urls.push(`${base}/${numPrefix}_cover${charSuffix}.png`);
-        urls.push(`${base}/${numPrefix}_cover${charSuffix}.jpg`);
-      }
-    }
-    return [...new Set(urls)];
-  }, [volId, coverImage, coverSlug, charSuffix]);
-
-  const [urlIdx, setUrlIdx] = useState(0);
-  React.useEffect(() => { setUrlIdx(0); }, [coverImage, coverSlug, volId]);
-
-  const allFailed = urlIdx >= coverUrls.length;
-  const currentUri = allFailed ? null : coverUrls[urlIdx];
+  const size = isMobile ? 160 : 280;
 
   return (
     <View style={{
-      width: heroW, aspectRatio: 3 / 4, borderRadius: 16,
-      backgroundColor: theme.gradA, overflow: 'hidden',
+      width: size, height: size * 4 / 3,
+      borderRadius: isMobile ? 14 : radius.btn,
+      backgroundColor: theme.gradB,
+      overflow: 'hidden',
     }}>
-      {currentUri && !allFailed ? (
-        <>
-          <Image
-            source={{ uri: currentUri }}
-            style={{ position: 'absolute', top: 0, right: 0, width: '200%', height: '100%' }}
-            contentFit="cover"
-            cachePolicy="disk"
-            transition={300}
-            onError={() => setUrlIdx(i => i + 1)}
-          />
-          <View style={{
-            position: 'absolute', top: 0, left: 0, right: 0,
-            padding: isMobile ? spacing.lg : spacing.xl,
-            backgroundColor: 'rgba(26,36,56,0.3)',
-          }}>
-            <Text style={{
-              color: '#fff', fontSize: isMobile ? 13 : 14, fontWeight: '600',
-              textShadowColor: 'rgba(0,0,0,0.5)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3,
-            }}>溪水旁</Text>
-          </View>
-          <View style={{
-            position: 'absolute', bottom: 0, left: 0, right: 0,
-            padding: isMobile ? spacing.lg : spacing.xl,
-            backgroundColor: 'rgba(26,36,56,0.5)',
-          }}>
-            <Text style={{
-              color: '#fff', fontSize: isMobile ? 56 : 72, fontWeight: '700',
-              letterSpacing: -3, lineHeight: isMobile ? 60 : 76,
-              textShadowColor: 'rgba(0,0,0,0.5)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 4,
-            }}>{volId}</Text>
-          </View>
-        </>
+      {showImage ? (
+        <Image
+          source={{ uri: coverUri! }}
+          style={{ position: 'absolute', top: 0, right: 0, width: '200%', height: '100%' }}
+          contentFit="cover"
+          cachePolicy="disk"
+          transition={300}
+          onError={() => setImgError(true)}
+        />
       ) : (
-        <View style={{ flex: 1, padding: isMobile ? spacing.lg : spacing.xl, justifyContent: 'space-between' }}>
-          <Text style={{ color: '#fff', fontSize: isMobile ? 13 : 14, fontWeight: '600', opacity: 0.92 }}>溪水旁</Text>
-          <View>
-            <Text style={{
-              color: '#fff', fontSize: isMobile ? 56 : 72, fontWeight: '700',
-              letterSpacing: -3, lineHeight: isMobile ? 60 : 76,
-            }}>{volId}</Text>
-          </View>
+        <View style={{ flex: 1, padding: isMobile ? 14 : spacing.lg, justifyContent: 'space-between' }}>
+          <Text style={{ color: '#fff', fontSize: isMobile ? 13 : fontSize.small, fontWeight: '600', opacity: 0.92 }}>溪水旁</Text>
+          <Text style={{
+            color: '#fff', fontSize: isMobile ? 56 : 88, fontWeight: '700',
+            letterSpacing: -3, lineHeight: isMobile ? 60 : 92,
+          }}>{volId}</Text>
         </View>
       )}
     </View>
