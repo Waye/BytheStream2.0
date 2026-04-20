@@ -3,6 +3,5 @@ node_modules/
 dist/
 .DS_Store
 *.log
-tts/output/
 tts/.env
-tts/.venv/
+tts/.venv/tts/output/state.json
