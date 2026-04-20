@@ -1,4 +1,5 @@
 import { col } from './db.js';
+import { getAudioEpisode, listAudioEpisodesForVolume } from './audio.js';
 import { cached } from './cache.js';
 import type { Loaders } from './loaders.js';
 import type {
@@ -292,14 +293,57 @@ export const resolvers = {
       return docs.map(toGqlFavorite);
     },
 
-    // ─────── 音频接口占位 ───────
+    // ─────── 音频（接 TTS 本地产物）───────
     audioEpisode: async (_: unknown, { id }: { id: string }) => {
-      return MOCK_AUDIO_EPISODES.find(e => e.id === id) ?? null;
+      const [volStr, slug] = String(id).split(':');
+      const volume = Number(volStr);
+      if (!volume || !slug) return null;
+
+      const audio = getAudioEpisode(volume, slug);
+      if (!audio) return null;
+
+      const article = await col<ArticleDoc>('Articles').findOne({
+        volume: String(volume),
+        id: audio.canonicalSlug,
+      });
+
+      return {
+        id: audio.id,
+        title: article?.title || '',
+        author: article?.author || null,
+        volume,
+        durationSeconds: audio.durationSeconds,
+        coverImage: null,
+        streamUrl: audio.streamUrl,
+        streamExpiresAt: null,
+      };
     },
 
     audioEpisodes: async (_: unknown, { volume }: { volume?: number }) => {
-      if (volume != null) return MOCK_AUDIO_EPISODES.filter(e => e.volume === volume);
-      return MOCK_AUDIO_EPISODES;
+      if (!volume) return [];
+
+      const audios = listAudioEpisodesForVolume(volume);
+      if (audios.length === 0) return [];
+
+      const slugs = audios.map(a => a.canonicalSlug);
+      const articles = await col<ArticleDoc>('Articles')
+        .find({ volume: String(volume), id: { $in: slugs } })
+        .toArray();
+      const byId = new Map(articles.map(a => [a.id, a]));
+
+      return audios.map(a => {
+        const article = byId.get(a.canonicalSlug);
+        return {
+          id: a.id,
+          title: article?.title || '',
+          author: article?.author || null,
+          volume,
+          durationSeconds: a.durationSeconds,
+          coverImage: null,
+          streamUrl: a.streamUrl,
+          streamExpiresAt: null,
+        };
+      });
     },
   },
 

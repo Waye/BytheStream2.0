@@ -4,6 +4,7 @@ import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
 import mercurius from 'mercurius';
 import { connectMongo, closeMongo, col } from './db.js';
+import { initAudioState } from './audio.js';
 import { initCache } from './cache.js';
 import { typeDefs } from './schema.js';
 import { resolvers } from './resolvers.js';
@@ -32,6 +33,7 @@ async function ensureIndexes() {
 async function main() {
   // ---- 基础设施 ----
   await connectMongo();
+  initAudioState();
   await initCache();
   await ensureIndexes();
 

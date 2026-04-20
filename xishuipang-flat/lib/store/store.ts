@@ -62,6 +62,15 @@ interface AppState {
   queue: ContentItem[];
   currentIdx: number;
   playing: boolean;
+
+  // 音频实际播放状态 (MiniPlayer 写,其他组件只读)
+  audioPosition: number;      // 秒
+  audioDuration: number;      // 秒
+  audioLoading: boolean;
+  audioError: string | null;
+  setAudioStatus: (position: number, duration: number) => void;
+  setAudioLoading: (loading: boolean) => void;
+  setAudioError: (err: string | null) => void;
   enqueue: (item: ContentItem) => void;
   playNow: (item: ContentItem) => void;
   togglePlay: () => void;
@@ -265,6 +274,13 @@ export const useAppStore = create<AppState>((set, get) => ({
   queue: [],
   currentIdx: 0,
   playing: false,
+  audioPosition: 0,
+  audioDuration: 0,
+  audioLoading: false,
+  audioError: null,
+  setAudioStatus: (position, duration) => set({ audioPosition: position, audioDuration: duration }),
+  setAudioLoading: (audioLoading) => set({ audioLoading }),
+  setAudioError: (audioError) => set({ audioError }),
 
   enqueue: (item) => set((s) => ({ queue: [...s.queue, item] })),
 

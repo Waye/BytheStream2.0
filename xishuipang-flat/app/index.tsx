@@ -22,6 +22,8 @@ export default function Home() {
   const { theme } = useTheme();
   const character = useAppStore(s => s.character);
   const favItems = useAppStore(s => s.favItems);
+  const queue = useAppStore(s => s.queue);
+  const currentIdx = useAppStore(s => s.currentIdx);
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
   const pad = isMobile ? spacing.lg : spacing.xl;
@@ -196,6 +198,31 @@ export default function Home() {
               />
             ))}
           </ScrollView>
+        )}
+
+        {/* ═══════════════ 播放队列 ═══════════════ */}
+        {queue.length > 0 && (
+          <View style={{ marginTop: spacing.xl }}>
+            <SectionHead
+              title={`播放队列 · ${queue.length} 首`}
+              linkLabel="查看 →"
+              onLinkPress={() => router.push('/queue')}
+            />
+            <ScrollView
+              horizontal showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingHorizontal: pad, gap: spacing.md }}
+              style={{ marginTop: spacing.md }}
+            >
+              {queue.map((a, i) => (
+                <FavCard
+                  key={`q-${a.id}-${i}`}
+                  item={a}
+                  onPress={() => router.push(`/article/${String(a.id).replace(/^\d+:/, '')}`)}
+                  highlight={i === currentIdx}
+                />
+              ))}
+            </ScrollView>
+          </View>
         )}
 
         {/* ═══════════════ 我的收藏 ═══════════════ */}
