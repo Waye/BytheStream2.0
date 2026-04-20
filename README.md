@@ -10,10 +10,13 @@
 | 路由 | Expo Router v4（文件即路由） |
 | 状态 | Zustand · Apollo Client 3.x（AsyncStorage 持久化） |
 | 图片 | expo-image（三平台磁盘缓存）· jsDelivr CDN |
+| 音频 | expo-av · @react-native-community/slider |
 | 认证 | JWT · Google / Facebook OAuth（expo-auth-session） |
 | 后端 | Fastify · Mercurius GraphQL · DataLoader |
 | 数据库 | MongoDB Atlas（Xishuipang 库 · Articles / TableOfContents / Users / Favorites / Usage） |
+| TTS | MeloTTS-Chinese（本地 Mac M1）/ IndexTTS 1.5（后续用 RTX 5070） |
 | 缓存 | 内存缓存（Redis 接口预留）· Apollo cache-first |
+| 存储 | 本地 localhost（开发期）/ Cloudflare R2（生产，计划中） |
 
 ## 项目结构
 
@@ -21,41 +24,60 @@
 xishuipang-flat/
 ├── app/                    # 页面（Expo Router 文件路由）
 │   ├── _layout.tsx         # 根布局（ApolloProvider + ThemeProvider + MiniPlayer + bootstrapAuth）
-│   ├── index.tsx           # 首页（最新文章 + 为你推荐 + 收藏 stack + 往期 + 三段骨架屏）
-│   ├── article/[id].tsx    # 文章阅读器（首屏 2 张高优图 + 延后挂载其余图）
-│   ├── volume/[id].tsx     # 期刊详情（封面图 Hero + track list）
-│   ├── volumes.tsx         # 全部期刊（排序筛选 + 封面图网格）
-│   ├── favorites.tsx       # 收藏管理
-│   ├── search.tsx          # 搜索（分页 infinite scroll）
-│   ├── queue.tsx           # 播放队列（↑↓ 排序）
-│   ├── login.tsx           # 登录（Google/FB OAuth + 邮箱降级）
-│   ├── profile.tsx         # 用户中心（头像 + 登出 + 简繁设置 + 收藏）
-│   ├── legal.tsx           # 法律声明（中英双语）
-│   └── privacy.tsx         # Privacy Policy
+│   ├── index.tsx           # 首页（欢迎卡 + 最新文章 + 推荐 + 播放队列 stack + 收藏 stack + 往期）
+│   ├── article/[id].tsx
+│   ├── volume/[id].tsx
+│   ├── volumes.tsx
+│   ├── favorites.tsx
+│   ├── search.tsx
+│   ├── queue.tsx
+│   ├── login.tsx
+│   ├── profile.tsx
+│   ├── legal.tsx
+│   └── privacy.tsx
 ├── lib/
-│   ├── theme/              # 设计系统（7 主题 + tokens + themeList）
-│   ├── store/              # Zustand（user + 文章收藏云同步 + 音频收藏本地）
-│   ├── ui/                 # UI 组件（TopNav + ThemeMenu + Skeleton + cards）
+│   ├── theme/              # 设计系统（7 主题 · brand/onBrand/danger 等完整 token）
+│   ├── store/              # Zustand（user + 收藏 + 队列 + 音频播放状态）
+│   ├── ui/
+│   │   ├── MiniPlayer.tsx  # 底部播放器（expo-av + Slider + 队列徽章 + 欢迎音频 fallback）
+│   │   └── ...             # TopNav / ThemeMenu / Skeleton / cards
 │   ├── auth/               # OAuth hooks（Google / Facebook）
-│   ├── recommend.ts        # 客户端推荐算法（加权打分 + 热门回落）
-│   ├── mock/               # 公告轮播数据
-│   └── graphql/            # Apollo Client（authLink + 持久化）+ gql 查询
-├── assets/images/          # 教会照片（公告轮播用）
+│   ├── recommend.ts
+│   ├── mock/
+│   └── graphql/
 ├── server/                 # 后端（独立 Node 项目）
 │   ├── src/
-│   │   ├── index.ts        # Fastify 入口 + CORS + rate limit + ensureIndexes
-│   │   ├── schema.ts       # GraphQL SDL（含 Auth/Favorite/AudioEpisode）
-│   │   ├── resolvers.ts    # Query / Mutation 实现
-│   │   ├── auth.ts         # JWT + Google/FB token 验证
-│   │   ├── loaders.ts      # DataLoader（批量查询）
-│   │   ├── db.ts           # MongoDB 连接池
-│   │   ├── cache.ts        # 缓存（Redis / 内存 fallback）
-│   │   └── types.ts        # TypeScript 类型
+│   │   ├── index.ts        # Fastify 入口（启动时 initAudioState）
+│   │   ├── schema.ts
+│   │   ├── resolvers.ts    # audioEpisode / audioEpisodes 接 TTS 产物
+│   │   ├── audio.ts        # 读 tts/output/state.json，简繁合并，生成 streamUrl
+│   │   ├── auth.ts
+│   │   ├── loaders.ts
+│   │   ├── db.ts
+│   │   ├── cache.ts
+│   │   └── types.ts
 │   ├── package.json
 │   └── .env.example
-├── DESIGN.md               # 设计系统文档（Pinterest 风格参考）
-├── streaming.md            # 架构规划（音频流 + HLS）
-└── 工作日志.md              # 开发日志
+├── tts/                    # 本地 TTS 批处理（Python）
+│   ├── config.py           # 统一配置（SPEED=0.9, BITRATE=32k, OUTPUT_SAMPLE_RATE=22050）
+│   ├── db.py               # MongoDB 读取
+│   ├── textproc.py         # content[] → 可朗读文本 + 语言检测
+│   ├── synth.py            # MeloTTS 包装（ZH/EN 双模型）
+│   ├── scripts/
+│   │   ├── smoke_test.py       # 冒烟测试
+│   │   ├── generate_one.py     # 单篇测试
+│   │   ├── generate_welcome.py # 生成欢迎音频
+│   │   ├── batch.py            # 批量 + 断点续传
+│   │   ├── check.py            # 进度查看
+│   │   └── serve.py            # 本地静态 HTTP（Range 支持，给前端试听）
+│   └── output/
+│       ├── state.json      # 进度清单
+│       ├── _welcome.mp3    # 未登录用户的欢迎音频
+│       └── volume_XX/*.mp3
+├── audio-integration/      # 参考代码（已并入主项目，保留做备份）
+├── DESIGN.md
+├── streaming.md
+└── 工作日志.md
 ```
 
 ## 快速开始
@@ -66,108 +88,171 @@ xishuipang-flat/
 cd server
 npm install
 cp .env.example .env
-# 编辑 .env 填入 MongoDB Atlas URI + JWT_SECRET（OAuth 变量可空）
+# .env 填入 MongoDB Atlas URI + JWT_SECRET
+# 新增一行：AUDIO_BASE_URL=http://localhost:8090
 npm run dev
 # ✓ MongoDB connected
-# ✓ Indexes ensured
+# ✓ Audio index loaded: N episodes from .../tts/output/state.json
 # 🚀 GraphQL server ready at http://localhost:4000/graphiql
 ```
 
-### 2. 启动前端
+### 2. 启动 TTS 静态服务（音频）
 
 ```bash
-# 新开终端
+cd tts
+# 激活 Python 环境（首次见 tts/README.md 安装依赖）
+conda activate python-mac-gpu  # 或 source .venv/bin/activate
+python -m scripts.serve
+# Serving .../tts/output
+#   http://localhost:8090/
+```
+
+### 3. 启动前端
+
+```bash
 cd xishuipang-flat
 npm install
+npx expo install @react-native-community/slider
 npx expo start --clear
 # 按 w 打开 Web / 按 i 打开 iOS 模拟器
 ```
 
-### 3. 验证
+### 4. 验证
 
 - GraphiQL: `http://localhost:4000/graphiql`
-- Web: `http://localhost:8081`
-- iOS: Metro 终端按 `i`
+- 静态音频: `http://localhost:8090/volume_85/11_li_s.mp3`
+- 前端: `http://localhost:8081`
 
 ## 核心功能
 
 ### 已完成
-- **首页**：4 页公告轮播（教会照片+外链）+ 期号选择器 + 文章水平滑窗 + **为你推荐**（基于收藏）+ 横向收藏 stack（新在前）+ 往期期刊
-- **推荐算法**：客户端加权打分（作者 3 分 / 类别 2 分 / 期号距离 1 分），同作者最多 2 篇多样化；未登录 / 无收藏时显示热门往期
-- **骨架屏**：三段区域（最新文章 / 推荐 / 往期期刊）加载时用脉动灰卡占位，内容就位后不上下抽搐
-- **文章阅读**：首屏 2 张图 `priority=high` + 其余 `priority=low` 延后挂载 + 稳定高度占位避免跳动；字号四档；简繁切换
-- **期刊详情**：封面图 Hero（右半裁切）+ Spotify 专辑式 track list + 播放全部
-- **全部期刊**：封面图网格 + 最新/最早排序 + 一次加载
-- **全文搜索**：MongoDB `$text` 索引 + 分页 infinite scroll
-- **用户系统**：JWT 登录 · Google/FB OAuth（schema 就绪）· 邮箱降级登录 · 头像 UI · 登出
-- **文章收藏云同步**：登录后本地 ↔ MongoDB Favorites 集合（userId + articleId 唯一索引）
-- **音频收藏本地**：AsyncStorage 持久化（接口就绪，音频功能待真实接入）
-- **播放队列**：＋ 加入 / ▶ 播放 / ↑↓ 排序 / ✕ 删除
-- **7 主题**：暖白 / 深色 / 护眼 / 春 / 夏 / 秋 / 冬 · ☰ 下拉菜单单选（点勾）
-- **Mini Player**：全局固定底部
-- **桌面端紧凑布局**：maxWidth 1120 + 卡片 -15%（移动端不变）
-- **图片加速**：jsDelivr CDN（替代 GitHub raw，解决 CORB 阻塞）+ expo-image 磁盘缓存
-- **Apollo 持久化**：`cache-first` + AsyncStorage（秒开所有已访问页面）
-- **版权页面**：法律声明（中英双语）+ Privacy Policy
+- **首页**：欢迎卡（未登录）+ 公告轮播 + 期号选择器 + 最新文章滑窗 + 为你推荐 + **播放队列 stack**（带数量） + 收藏 stack + 往期期刊
+- **推荐算法**：加权打分 + 同作者多样化 + 未登录热门回落
+- **骨架屏**：三段占位，加载不抽搐
+- **文章阅读**：首屏 2 张图 high priority + 其余延后挂载 + 字号四档 + 简繁切换
+- **期刊详情**：封面图 Hero + Spotify 式 track list
+- **全部期刊**：封面网格 + 最新/最早排序
+- **全文搜索**：MongoDB `$text` + infinite scroll
+- **用户系统**：JWT 登录 · Google/FB OAuth schema（待后台配置）· 邮箱降级 · 登出
+- **文章收藏云同步**：MongoDB `Favorites` 集合
+- **音频收藏本地**：AsyncStorage
+- **播放队列**：+ 加入 / ▶ 播放 / ↑↓ 排序 / ✕ 删除 / 徽章显示数量
+- **音频播放**：
+  - 本地 TTS 批处理（MeloTTS-Chinese，M1 Pro CPU 5x 实时）
+  - 后端 `audio.ts` 读 `tts/output/state.json` + 简繁 slug 归并（_t → _s）
+  - `scripts/serve.py` HTTP Range 服务（拖动进度条可从中间加载）
+  - 前端 MiniPlayer：expo-av 实际播放 + Slider 拖动进度 + 队列徽章 + 欢迎音频 fallback
+- **7 主题**：暖白 / 深色 / 护眼 / 春 / 夏 / 秋 / 冬
+- **Mini Player**：底部固定，theme 统一配色（brand/onBrand/danger 全用上）
+- **欢迎音频**：未登录用户进首页自动在 MiniPlayer 加载"溪水旁·欢迎"（含两段诗篇引用 + 编辑部致谢）
 
 ### 待做
-- OAuth 后台注册（Google Cloud Console / Facebook Developers）
-- 服务器部署（待决定服务商）
-- 音频实际播放（HLS + 对象存储 + expo-av / react-native-track-player）
-- 播放队列拖拽排序（Reanimated + Gesture Handler）
+- **OAuth 后台配置**：Google Cloud Console + Facebook Developers 注册 Client ID
+- **TTS 升级**：换到 Windows RTX 5070 笔记本 + **IndexTTS 1.5**（Bilibili 开源，标准普通话，可克隆音色，零样本 voice clone）
+- **音频部署**：跑完 1352 篇全量 → 传 **Cloudflare R2**（10GB 免费 + 零出站费）→ `AUDIO_BASE_URL` 一行改完
+- **服务器部署**：Heroku / Railway / Fly（待定）
+- **播放队列拖拽排序**（Reanimated + Gesture Handler）
+- Redis 缓存接入（配 REDIS_URL 即切换）
+- GraphQL codegen
 
-## 图片系统
+## 音频系统
 
-图片通过 jsDelivr CDN 从 GitHub 仓库加载：
+### 整体架构
 
 ```
-https://cdn.jsdelivr.net/gh/CGCToronto/ByTheStreamWebsite@master/public/content/volume_{N}/images/{filename}
+┌─────────────────────────────────────────────┐
+│ Expo App                                    │
+└────────┬──────────────────────┬─────────────┘
+         │ GraphQL :4000        │ HTTP Range :8090
+         ▼                      ▼
+┌──────────────────┐    ┌────────────────────┐
+│ Fastify          │    │ scripts/serve.py   │
+│ audioEpisode(id) │    │ (开发期)           │
+│ → streamUrl      │    │                    │
+│                  │    │ or Cloudflare R2   │
+│ state.json 读取  │    │ (生产期)           │
+│ _t → _s 归并     │    └────────────────────┘
+└──────────────────┘              ▲
+                                  │
+                  ┌───────────────┴───────────────┐
+                  │ tts/output/volume_XX/*.mp3    │
+                  │ (本地生成,简繁共用)            │
+                  └───────────────────────────────┘
 ```
 
-| 类型 | 来源 | 缓存 |
-|---|---|---|
-| 文章内嵌图 | content 数组中 `<filename.jpg>` 标记 | expo-image 磁盘缓存（首 2 张 high priority） |
-| 文章卡片缩略图 | GraphQL `firstImage` 字段 | expo-image 磁盘缓存 |
-| 期刊封面 | GraphQL `coverImage` 字段（信任后端，不再猜格式） | expo-image 磁盘缓存 |
-| 公告轮播背景 | 本地 `assets/images/` | bundled |
+**数据流**：App 向 :4000 查 `audioEpisode(id)` 拿到 streamUrl，然后直接向 :8090 或 R2 请求 mp3 字节流（expo-av 播放 + Slider 拖动控制）。
+
+### TTS 配置
+
+- **模型**：MeloTTS-Chinese（VITS 架构，Mac M1 Pro CPU 可跑）
+- **码率**：32 kbps MP3 + 22.05 kHz 采样率（1352 篇总计预估 ~2.5GB）
+- **语速**：0.9（朗读式文章沉静）
+- **简繁共用**：只生成简体 `_s`，后端 resolver 里 `_t → _s` 自动映射到同一文件
+- **英文检测**：整篇英文占比 > 70% 自动切 EN 模型（中英混读走 ZH mix-en 模式）
+- **断点续传**：`output/state.json` 记录已完成，Ctrl-C 重跑不会丢进度
+
+### 生产升级路径
+
+未来换到 Windows RTX 5070 笔记本 + **IndexTTS 1.5**：
+- Bilibili 开源，为中文优化
+- 标准普通话（解决 MeloTTS 的南方口音问题）
+- 零样本音色克隆（10 秒参考音频）
+- Apache 2.0 可商用
+- RTX 5070 需 PyTorch 2.9.1+cu128 (Blackwell sm_120 支持)
+- 预估跑完 1352 篇仅需 2-5 小时（M1 Pro 要 30-40 小时）
+
+### 存储成本
+
+| 服务 | 起步价 | 出站流量 | 10GB 月成本 |
+|---|---|---|---|
+| **Cloudflare R2** ⭐ | $0 | 全免费 | $0（免费档） |
+| DigitalOcean Spaces | $5/月 flat | 1TB 免费 | $5 |
+| AWS S3 | $0.023/GB | $0.09/GB 之后 | $0.23 + egress |
+
+选 R2。1352 篇 × ~2MB ≈ 2.5GB，完全在 10GB 免费档内。
+
+## 欢迎音频
+
+未登录用户打开首页，底部 MiniPlayer 自动加载 `_welcome.mp3`：
+
+> 他要像一棵树栽在溪水旁，按时候结果子... ——诗篇 1:3
+>
+> 他使我躺卧在青草地上，领我到幽静的溪水旁。——诗篇 23:2
+>
+> 你好，欢迎来到溪水旁。
+>
+> 三十二年来，这本基督教中文季刊每一季度，把信徒的见证、默想和教义分享，带到读者的案头。现在，它也会朗读给你听。
+>
+> 在通勤路上，厨房里，睡前的床头，祷告之后——一千多篇文章、八十余期精选，都能被聆听。
+>
+> 我的心哪，你当默默无声，专等候神。
+>
+> 感谢大家一直以来的支持。愿神祝福你。——溪水旁编辑部
+
+首页同时显示欢迎卡（"溪水旁 / 三十二年来..." + "登录同步收藏"按钮）。
 
 ## GraphQL API
 
 ```graphql
-# 最新期号
+# 文章
 { latestVolume }
-
-# 某期文章（简体，含 firstImage）
-{ articlesByVolume(volume: 85, character: "simplified") {
-    title author firstImage
-  }
-}
-
-# 单篇文章含正文
+{ articlesByVolume(volume: 85, character: "simplified") { title author firstImage } }
 { article(volume: 85, slug: "0_prayer_s") { title content firstImage } }
-
-# 期刊列表（含封面信息）
-{ volumes(offset: 0, limit: 6) { id subtitle count coverSlug coverImage } }
-
-# 搜索（分页）
-{ search(query: "祷告", character: "simplified", limit: 10, offset: 0) {
-    total articles { title author volume }
-  }
-}
+{ volumes(offset: 0, limit: 6) { id subtitle count coverImage } }
+{ search(query: "祷告", character: "simplified", limit: 10, offset: 0) { total articles { title } } }
 
 # 认证
 mutation { loginOrRegister(email: "x@y.com") { token user { id email } } }
-mutation { loginWithGoogle(idToken: "...") { token user { ...UserFields } } }
-mutation { loginWithFacebook(accessToken: "...") { token user { ...UserFields } } }
 { me { id email name provider } }
 
 # 文章收藏
 mutation { addFavorite(articleId: "85:0_prayer_s", title: "...", author: "...") { id } }
-mutation { removeFavorite(articleId: "85:0_prayer_s") }
 { myFavorites { id articleId volume title author createdAt } }
 
-# 音频（接口就绪，暂返回空数组）
+# 音频 ← 已打通
+{ audioEpisode(id: "85:11_li_s") { streamUrl durationSeconds title author } }
 { audioEpisodes(volume: 85) { id title streamUrl durationSeconds } }
+# 简繁自动归并:audioEpisode(id: "85:11_li_t") 返回的 streamUrl 指向同一个 _s.mp3
 ```
 
 ## MongoDB 集合
@@ -176,69 +261,72 @@ mutation { removeFavorite(articleId: "85:0_prayer_s") }
 |---|---|---|
 | `Articles` | 文章正文 | `{ title: "text", content: "text" }` |
 | `TableOfContents` | 期刊目录 | `{ volume, character }` |
-| `Users` | 用户（扩展 OAuth 字段） | `{ provider, providerId }` unique · `{ email }` sparse |
+| `Users` | 用户 | `{ provider, providerId }` unique · `{ email }` sparse |
 | `Favorites` | 文章收藏 | `{ userId, articleId }` unique · `{ userId, createdAt: -1 }` |
-| `Usage` | 阅读行为上报 | — |
+| `Usage` | 阅读行为 | — |
 
 `Users` 和 `Favorites` 的索引在后端启动时由 `ensureIndexes()` 自动创建。
 
 ## Update Logs
 
+### 0420 — 批次 7：音频系统全线打通 + TTS 本地批处理
+- **TTS 管道**：新增 `tts/` 目录，MeloTTS-Chinese 本地批处理
+  - `config.py` / `db.py` / `textproc.py`（语言检测 + 切段） / `synth.py`（ZH/EN 双模型 + ffmpeg MP3 + 降采样 22.05kHz）
+  - 断点续传（state.json）+ 简繁只生成 `_s` 版
+  - 欢迎音频脚本 `scripts/generate_welcome.py`
+- **后端音频接入**：
+  - `server/src/audio.ts`：读 state.json + 简繁归并 + fs.watch 热重载
+  - `resolvers.ts`：`audioEpisode` / `audioEpisodes` 从 mock 切到真实 TTS 产物
+  - `index.ts` 启动时 `initAudioState()`
+- **前端 MiniPlayer**：
+  - 装 expo-av + @react-native-community/slider
+  - 实际播放 expo-av Sound + 自动切换音轨 + 播完自动 next
+  - Slider 真实拖动进度（分离 seeking 本地状态防回弹）
+  - 主按钮用 View 画三角/双竖线（不依赖字体）
+  - theme 颜色全面对齐：brand（主按钮/进度）+ onBrand（图标）+ danger（队列徽章）+ textPrimary/textSecondary（文字层次）
+  - 未登录自动加载 `welcome:_welcome` 特殊 track
+  - 已登录队列为空显示占位条
+- **首页**：
+  - 未登录显示欢迎卡（版本 A 文案 + 诗篇 62:5 + 登录同步收藏按钮）
+  - 新增"播放队列 · N 首"横向 stack
+- **其他**：
+  - store 加 `audioPosition` / `audioDuration` / `audioLoading` / `audioError` + setters
+  - pymongo / python-dotenv / mutagen 依赖
+  - 配置 HF_ENDPOINT=hf-mirror.com 加速模型下载
+
 ### 0419 晚 — 批次 6：推荐专栏 + 骨架屏 + 汉堡主题菜单 + 桌面缩放 + 文章图片优化
-- **为你推荐区块**（首页最新文章与收藏之间）：客户端加权打分算法（作者 3 分 + 类别 2 分 + 期号距离 1 分），同作者最多 2 篇多样化；未登录/无收藏显示"热门往期"；候选池从 Apollo cache 里最近 3 期取，零额外请求
-- **骨架屏**：`lib/ui/Skeleton.tsx`（脉动灰卡），三区共用；避免加载时内容跳动
-- **主题选择器重构**：TopNav 的 7 主题横向滚动 → 右上角 ☰ 下拉 Modal，单选打勾
-- **桌面端紧凑布局**：maxWidth 1320 → 1120；ArticleCard 220→188 / FavCard 280→238 / VolumeCard 180→153（-15%）；字体与移动端不变
-- **文章页图片优化**：首 2 张 `priority="high"` 立刻拉；其余 `priority="low"` 延后 200ms 挂载；给稳定预估高度避免文字抽搐
+（见 `工作日志.md`）
 
 ### 0419 — 批次 5：用户系统 + 云端收藏 + 7 主题 + 性能优化
-- **用户认证**：JWT + Google/Facebook OAuth schema（待后台注册 Client ID）+ 邮箱降级登录
-- **文章收藏云同步**：登录后本地 ↔ MongoDB Favorites 集合；未登录本地内存
-- **音频收藏本地**：AsyncStorage 持久化（key: `xsp_audio_favs_v1`）
-- **7 主题**：原 3 个 + 春/夏/秋/冬；护眼主题重新调色（暖焦糖棕代替冷蓝）
-- **TopNav 主题选择器**：横向滚动色卡（批次 6 已改成汉堡下拉）
-- **首页收藏 stack**：横向滚动 + 新在前（unshift）+ 右侧箭头暗示可滑
-- **图片加速**：jsDelivr CDN 替代 GitHub raw（解决 CORB 阻塞）
-- **封面简化**：信任后端 `coverImage`，不再猜 7 种 URL（每卡请求数 7 → 1）
-- **Apollo 持久化**：`cache-first` + `apollo3-cache-persist` AsyncStorage（整页刷新秒开）
+（见 `工作日志.md`）
 
 ### 0418 — 图片系统 + UI 优化
-- expo-image 三平台磁盘缓存
-- 文章/期刊/封面真实图片（GitHub raw 加载）
-- 自适应图片宽高比（AutoImage 组件）
-- 首页期号选择器 + 公告轮播教会照片
-- 全部期刊排序筛选器
-- 法律声明 + Privacy Policy 页
-- Footer 版权信息
+（见 `工作日志.md`）
 
 ### 0417 — 后端 + 真实数据 + 简繁切换
-- Fastify + Mercurius GraphQL 后端
-- 全页面 mock → MongoDB 真实数据
-- 简繁切换（全局 `_s` / `_t` slug 过滤）
-- 搜索分页 infinite scroll
+（见 `工作日志.md`）
 
 ### 0416 — 8 个页面实现
-- 8 个占位页替换为真实实现
-- IconButton 通用组件
+（见 `工作日志.md`）
 
 ### 0411 — UI 原型
-- `xishuipang-prototype.html` 单文件原型
+（见 `工作日志.md`）
 
 ## 路径映射表
 
 | 路由 | 页面 | 数据源 |
 |---|---|---|
-| `/` | 首页 | GraphQL + 本地公告 + 客户端推荐算法 |
+| `/` | 首页 | GraphQL + 欢迎卡 + 推荐 + 队列/收藏 stack |
 | `/volume/:id` | 期刊详情 | GraphQL: volume + articlesByVolume |
-| `/article/:id` | 文章阅读器 | GraphQL: article（含 content + firstImage） |
+| `/article/:id` | 文章阅读器 | GraphQL: article |
 | `/queue` | 播放队列 | Zustand store |
-| `/volumes` | 全部期刊 | GraphQL: volumes（含 coverImage） |
+| `/volumes` | 全部期刊 | GraphQL: volumes |
 | `/favorites` | 管理收藏 | Zustand favItems（云同步） |
 | `/search?q=` | 搜索结果 | GraphQL: search（分页） |
 | `/login` | 登录 | GraphQL: loginOrRegister / loginWithGoogle / loginWithFacebook |
 | `/profile` | 用户中心 | Zustand user + favItems |
-| `/legal` | 法律声明 | 静态内容（中英双语） |
-| `/privacy` | Privacy Policy | 静态内容 |
+| `/legal` | 法律声明 | 静态 |
+| `/privacy` | Privacy Policy | 静态 |
 
 ## 版权
 
