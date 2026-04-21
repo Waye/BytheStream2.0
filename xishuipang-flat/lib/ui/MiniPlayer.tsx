@@ -7,7 +7,7 @@ import { useApolloClient } from '@apollo/client';
 
 import { useAppStore } from '../store';
 import { useTheme, radius, spacing, fontSize } from '../theme';
-import { GET_AUDIO_EPISODE } from '../graphql/queries';
+import { GET_AUDIO_EPISODE, GET_ARTICLE } from '../graphql/queries';
 
 const AUDIO_BASE_URL = 'http://localhost:8090';
 
@@ -131,6 +131,17 @@ export function MiniPlayer({ onOpenQueue, bottomInset = 0 }: { onOpenQueue?: () 
 
         soundRef.current = sound;
         setAudioLoading(false);
+
+        // 预取文章详情到 Apollo cache,用户点标题时瞬间显示
+        if (track && !String(track.id).startsWith('welcome:')) {
+          const rawSlug = String(track.id).replace(/^\d+:/, '');
+          const character = rawSlug.endsWith('_t') ? 'traditional' : 'simplified';
+          client.query({
+            query: GET_ARTICLE,
+            variables: { volume: track.volume, slug: rawSlug, character },
+            fetchPolicy: 'cache-first',
+          }).catch(() => {});
+        }
       } catch (e: any) {
         if (!cancelled) {
           setAudioError(e?.message || '音频加载失败');
@@ -198,8 +209,8 @@ export function MiniPlayer({ onOpenQueue, bottomInset = 0 }: { onOpenQueue?: () 
         <Slider
           style={{ width: '100%', height: 24 }}
           minimumValue={0}
-          maximumValue={Math.max(audioDuration, 1)}
-          value={sliderValue}
+          maximumValue={Number.isFinite(audioDuration) && audioDuration > 0 ? audioDuration : 1}
+          value={Number.isFinite(sliderValue) ? sliderValue : 0}
           minimumTrackTintColor={theme.brand}
           maximumTrackTintColor={theme.borderSoft}
           thumbTintColor={theme.brand}
@@ -226,8 +237,7 @@ export function MiniPlayer({ onOpenQueue, bottomInset = 0 }: { onOpenQueue?: () 
           onPress={() => {
             if (!track) return;
             if (String(track.id).startsWith('welcome:')) return;
-            const slug = String(track.id).replace(/^\d+:/, '');
-            router.push(`/article/${slug}`);
+            router.push(`/article/${encodeURIComponent(String(track.id))}`);
           }}
           style={{ flex: 1, minWidth: 0, marginRight: spacing.md }}
         >

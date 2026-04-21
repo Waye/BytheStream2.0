@@ -89,6 +89,7 @@ export default function Reader() {
 
   const { data, loading } = useQuery(GET_ARTICLE, {
     variables: { volume, slug },
+    fetchPolicy: 'cache-first',
   });
   const article = data?.article;
   const isFav = article ? favs.has(article.id) : false;
@@ -129,8 +130,17 @@ export default function Reader() {
           <Text style={{ fontSize: fontSize.small, color: theme.textSecondary, fontWeight: '600' }}>返回</Text>
         </View>
 
-        {loading || !article ? (
+        {loading ? (
           <ActivityIndicator color={theme.brand} style={{ marginVertical: spacing.xxl }} />
+        ) : !article ? (
+          <View style={{ paddingVertical: spacing.xxl, alignItems: 'center' }}>
+            <Text style={{ fontSize: fontSize.body, color: theme.textSecondary }}>
+              找不到这篇文章（volume {volume} · {slug}）
+            </Text>
+            <Pressable onPress={goBack} style={{ marginTop: spacing.lg, paddingHorizontal: spacing.lg, paddingVertical: 10, backgroundColor: theme.brand, borderRadius: radius.btn }}>
+              <Text style={{ color: theme.onBrand, fontWeight: '600' }}>返回</Text>
+            </Pressable>
+          </View>
         ) : (
           <>
             <View style={{

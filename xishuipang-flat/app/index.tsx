@@ -217,7 +217,7 @@ export default function Home() {
                 <FavCard
                   key={`q-${a.id}-${i}`}
                   item={a}
-                  onPress={() => router.push(`/article/${String(a.id).replace(/^\d+:/, '')}`)}
+                  onPress={() => router.push(`/article/${encodeURIComponent(a.id)}`)}
                   highlight={i === currentIdx}
                 />
               ))}
