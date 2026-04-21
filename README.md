@@ -2,6 +2,27 @@
 
 基督教中文季刊「溪水旁」的全平台阅读应用。一套代码覆盖 iOS、Android、Web。
 
+## 应用截图
+
+### iOS
+<p align="center">
+  <img src="xishuipang-flat/assets/pics/ios1.png" width="200" />
+  <img src="xishuipang-flat/assets/pics/ios3.png" width="200" />
+  <img src="xishuipang-flat/assets/pics/ios4.png" width="200" />
+  <img src="xishuipang-flat/assets/pics/ios5.png" width="200" />
+  <img src="xishuipang-flat/assets/pics/ios6.png" width="200" />
+  <img src="xishuipang-flat/assets/pics/ios7.png" width="200" />
+  <img src="xishuipang-flat/assets/pics/ios8.png" width="200" />
+  <img src="xishuipang-flat/assets/pics/ios9.png" width="200" />
+</p>
+
+### Web
+<p align="center">
+  <img src="xishuipang-flat/assets/pics/web1.png" width="600" />
+  <img src="xishuipang-flat/assets/pics/web2.png" width="600" />
+  <img src="xishuipang-flat/assets/pics/web3.png" width="600" />
+</p>
+
 ## 技术栈
 
 | 层 | 技术 |
