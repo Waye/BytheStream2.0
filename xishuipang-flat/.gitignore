@@ -5,3 +5,4 @@ dist/
 *.log
 tts/.env
 tts/.venv/tts/output/state.json
+.env
