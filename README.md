@@ -267,50 +267,6 @@ mutation { addFavorite(articleId: "85:0_prayer_s", title: "...", author: "...") 
 
 `Users` 和 `Favorites` 的索引在后端启动时由 `ensureIndexes()` 自动创建。
 
-## Update Logs
-
-### 0420 — 批次 7：音频系统全线打通 + TTS 本地批处理
-- **TTS 管道**：新增 `tts/` 目录，MeloTTS-Chinese 本地批处理
-  - `config.py` / `db.py` / `textproc.py`（语言检测 + 切段） / `synth.py`（ZH/EN 双模型 + ffmpeg MP3 + 降采样 22.05kHz）
-  - 断点续传（state.json）+ 简繁只生成 `_s` 版
-  - 欢迎音频脚本 `scripts/generate_welcome.py`
-- **后端音频接入**：
-  - `server/src/audio.ts`：读 state.json + 简繁归并 + fs.watch 热重载
-  - `resolvers.ts`：`audioEpisode` / `audioEpisodes` 从 mock 切到真实 TTS 产物
-  - `index.ts` 启动时 `initAudioState()`
-- **前端 MiniPlayer**：
-  - 装 expo-av + @react-native-community/slider
-  - 实际播放 expo-av Sound + 自动切换音轨 + 播完自动 next
-  - Slider 真实拖动进度（分离 seeking 本地状态防回弹）
-  - 主按钮用 View 画三角/双竖线（不依赖字体）
-  - theme 颜色全面对齐：brand（主按钮/进度）+ onBrand（图标）+ danger（队列徽章）+ textPrimary/textSecondary（文字层次）
-  - 未登录自动加载 `welcome:_welcome` 特殊 track
-  - 已登录队列为空显示占位条
-- **首页**：
-  - 未登录显示欢迎卡（版本 A 文案 + 诗篇 62:5 + 登录同步收藏按钮）
-  - 新增"播放队列 · N 首"横向 stack
-- **其他**：
-  - store 加 `audioPosition` / `audioDuration` / `audioLoading` / `audioError` + setters
-  - pymongo / python-dotenv / mutagen 依赖
-  - 配置 HF_ENDPOINT=hf-mirror.com 加速模型下载
-
-### 0419 晚 — 批次 6：推荐专栏 + 骨架屏 + 汉堡主题菜单 + 桌面缩放 + 文章图片优化
-（见 `工作日志.md`）
-
-### 0419 — 批次 5：用户系统 + 云端收藏 + 7 主题 + 性能优化
-（见 `工作日志.md`）
-
-### 0418 — 图片系统 + UI 优化
-（见 `工作日志.md`）
-
-### 0417 — 后端 + 真实数据 + 简繁切换
-（见 `工作日志.md`）
-
-### 0416 — 8 个页面实现
-（见 `工作日志.md`）
-
-### 0411 — UI 原型
-（见 `工作日志.md`）
 
 ## 路径映射表
 
