@@ -1,6 +1,6 @@
 # 溪水旁 — 音频与流式架构
 
-## 0. 现状（2026/4/20）
+## 0. 现状（2026/4/21）
 
 音频系统**端到端打通**，当前架构是**纯 MP3 + HTTP Range**，没有用 HLS。
 
@@ -11,9 +11,9 @@
 │    └─ output/                                         │
 │        ├─ volume_85/11_li_s.mp3 (12:26 / 32kbps)     │
 │        ├─ _welcome.mp3                                │
-│        └─ state.json (索引：每个 mp3 的时长/大小)      │
+│        └─ state.json (索引:每个 mp3 的时长/大小)       │
 └──────────────┬───────────────────────────────────────┘
-               │ 本地批量生成（一篇一篇）
+               │ 本地批量生成(一篇一篇)
                ▼
 ┌──────────────────────────────────────────────────────┐
 │  scripts/serve.py — Python HTTP :8090                │
@@ -89,7 +89,7 @@ content[] (List[str])
        │   - 段落用空字符串分隔
        │   - 长句按标点切到 ≤400 字符
        │   - <filename.jpg> 标记直接丢弃
-       │   - detect_language() ZH/EN 自动判断（阈值 0.7）
+       │   - detect_language() ZH/EN 自动判断(阈值 0.7)
        ▼
 List[Chunk(text, lang, is_paragraph_break)]
        │
@@ -148,11 +148,11 @@ output/volume_N/<slug>.mp3 + state.json 更新
 ### 3.2 部署步骤（待做）
 
 ```bash
-# 1. 创建 R2 bucket（Cloudflare dashboard）
+# 1. 创建 R2 bucket(Cloudflare dashboard)
 #    名字: xishuipang-audio
-#    Public access: 开（或加 Worker 鉴权）
+#    Public access: 开(或加 Worker 鉴权)
 
-# 2. 配 rclone（一次性）
+# 2. 配 rclone(一次性)
 brew install rclone
 rclone config  # 选 r2 后填 access key / secret
 
@@ -165,7 +165,7 @@ rclone sync tts/output/ r2:xishuipang-audio/ \
 # server/.env:
 #   AUDIO_BASE_URL=https://pub-xxxxxxxxxx.r2.dev
 
-# 5. 重启 server，前端零改动
+# 5. 重启 server,前端零改动
 ```
 
 **state.json 不上传** —— 它只是本地索引，URL 拼装由 audio.ts 处理。
@@ -173,7 +173,7 @@ rclone sync tts/output/ r2:xishuipang-audio/ \
 ### 3.3 可选：Cloudflare Worker 加防盗链
 
 ```javascript
-// 简单的 token 校验（防直接拿 URL 在别处嵌）
+// 简单的 token 校验(防直接拿 URL 在别处嵌)
 addEventListener('fetch', event => {
   const url = new URL(event.request.url)
   const token = url.searchParams.get('t')
@@ -235,8 +235,8 @@ type AudioEpisode {
 ```graphql
 type AudioEpisode {
   ...
-  chapters: [AudioChapter!]!   # 章节标记（用 textproc 段落边界生成）
-  transcript: Transcript        # 文稿同步（朗读时高亮当前句）
+  chapters: [AudioChapter!]!   # 章节标记(用 textproc 段落边界生成)
+  transcript: Transcript        # 文稿同步(朗读时高亮当前句)
 }
 
 type Mutation {
@@ -247,11 +247,20 @@ type Mutation {
 
 这些都不影响 MVP 的"播得动 + 拖进度"基本功能。
 
+### 5.1 章节标记（chapter offsets）— 实现提示
+
+**不需要 AI 识别**：
+- 章节名：`textproc.py` 生成的 `Chunk` 已经有 `is_paragraph_break` 标记；用简单规则挑出短+独占一段+下一段是长正文的段 → 99% 是小标题
+- 时间位置：`synth.py` 合成时知道每段多长（`len(audio) / sample_rate`），合成时一边累加 offset 一边记录章节即可
+- 工作量：`synth.py` + `audio.ts` + schema + resolver + 前端 UI 合计约半天
+
+**回填老数据**：不用重跑音频，重跑 textproc 假装合成就能算出 offset（长度可预测）
+
 ---
 
 ## 6. 已完成 vs 未来路线
 
-### ✅ 已完成（2026/4/20）
+### ✅ 已完成（截至 2026/4/21）
 - MeloTTS 本地批处理管道（tts/ 完整目录）
 - 后端 audio.ts + state.json 热重载
 - resolvers 接 audioEpisode / audioEpisodes
@@ -259,14 +268,16 @@ type Mutation {
 - 简繁 canonical 归并
 - 欢迎音频（_welcome.mp3）+ 未登录默认播放
 - 队列徽章红点 + theme.brand 配色统一
+- Google + Facebook OAuth 全链路打通（批次 8）
 
 ### 🔄 进行中
-- 全量 1352 篇音频生成（首篇耗时 12 分钟，预计 30+ 小时）
+- 全量 1352 篇音频生成（首篇耗时 12 分钟，Mac CPU 预计 30+ 小时；等 RTX 5070 IndexTTS 跑）
 
 ### 🔮 未来
 - IndexTTS 1.5 部署（RTX 5070 + PyTorch 2.9.1+cu128）
 - Cloudflare R2 上线（rclone sync + 改 AUDIO_BASE_URL）
 - Cloudflare Worker 鉴权（streamExpiresAt 启用）
-- 章节标记（textproc 已有段落边界，加 chapter offsets 即可）
-- 文稿同步（朗读时高亮当前段，需要每段时间戳）
+- 章节标记（半天工作量，见 5.1）
+- 文稿同步（朗读时高亮当前段，需要每段时间戳，跟章节一套逻辑粒度细一级）
 - 后台批处理监控页（基于 state.json 的可视化）
+- OAuth 过审上线（Google External → Production，Facebook App Review）
