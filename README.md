@@ -332,8 +332,4 @@ mutation { addFavorite(articleId: "85:0_prayer_s", title: "...", author: "...") 
 | `/legal` | 法律声明 | 静态 |
 | `/privacy` | Privacy Policy | 静态 |
 
-## 版权
 
-多伦多华人福音堂
-© 2005–2026 Chinese Gospel Church of Toronto
-www.xishuipang.com · cgc_pen@yahoo.com
